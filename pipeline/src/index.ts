@@ -7,6 +7,8 @@ import { existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
+import 'dotenv/config';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -37,13 +39,7 @@ const __dirname = dirname(__filename);
  * If USE_CACHED_SLUGS=true, forces using the cached file (fails if cache doesn't exist).
  */
 
-const DEFAULT_PROBLEMS = [
-  'two-sum',
-  'add-two-numbers',
-  'longest-substring-without-repeating-characters',
-  'median-of-two-sorted-arrays',
-  'longest-palindromic-substring',
-];
+const DEFAULT_PROBLEMS: string[] = [];
 
 const CACHE_DIR = join(__dirname, '.cache');
 const SLUGS_CACHE_FILE = join(CACHE_DIR, 'problem-slugs.txt');
