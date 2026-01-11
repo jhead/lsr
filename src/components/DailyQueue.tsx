@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { ProblemCard } from './ProblemCard';
@@ -9,6 +9,7 @@ export function DailyQueue() {
   const { problemId } = useParams<{ problemId?: string }>();
   const navigate = useNavigate();
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const previousProblemIdRef = useRef<string | undefined>(problemId);
 
   // Find current problem index based on URL or default to first
   const currentIndex = problemId
@@ -32,27 +33,99 @@ export function DailyQueue() {
     }
   }, [problemId, dueProblems, navigate]);
 
+  // Listen for navigation events from sidebars to trigger transitions
+  useEffect(() => {
+    const handleNavigationStart = () => {
+      setIsTransitioning(true);
+    };
+    window.addEventListener('problem-navigation-start', handleNavigationStart);
+    return () => {
+      window.removeEventListener('problem-navigation-start', handleNavigationStart);
+    };
+  }, []);
+
+  // Trigger transition completion when problemId changes
+  useEffect(() => {
+    // Skip on initial mount
+    if (previousProblemIdRef.current !== undefined && previousProblemIdRef.current !== problemId) {
+      // Small delay to allow fade-in after URL change
+      const timer = setTimeout(() => {
+        setIsTransitioning(false);
+      }, 25);
+      return () => clearTimeout(timer);
+    }
+    previousProblemIdRef.current = problemId;
+  }, [problemId]);
+
   const handlePrevious = useCallback(() => {
     if (effectiveIndex > 0 && !isTransitioning) {
       setIsTransitioning(true);
-      // Wait for fade-out animation (300ms), then navigate
+      // Wait for fade-out animation (75ms), then navigate
       setTimeout(() => {
         navigateToProblem(effectiveIndex - 1);
-        setTimeout(() => setIsTransitioning(false), 50);
-      }, 300);
+        setTimeout(() => setIsTransitioning(false), 25);
+      }, 75);
     }
   }, [effectiveIndex, isTransitioning, navigateToProblem]);
 
   const handleNext = useCallback(() => {
     if (effectiveIndex < dueProblems.length - 1 && !isTransitioning) {
       setIsTransitioning(true);
-      // Wait for fade-out animation (300ms), then navigate
+      // Wait for fade-out animation (75ms), then navigate
       setTimeout(() => {
         navigateToProblem(effectiveIndex + 1);
-        setTimeout(() => setIsTransitioning(false), 50);
-      }, 300);
+        setTimeout(() => setIsTransitioning(false), 25);
+      }, 75);
     }
   }, [effectiveIndex, dueProblems.length, isTransitioning, navigateToProblem]);
+
+  // Fast keyboard navigation: up/left = previous, down/right = next (bypasses transition lock)
+  const handleKeyboardPrevious = useCallback(() => {
+    if (effectiveIndex > 0) {
+      setIsTransitioning(true);
+      navigateToProblem(effectiveIndex - 1);
+      // Clear transition state quickly for rapid navigation
+      setTimeout(() => setIsTransitioning(false), 25);
+    }
+  }, [effectiveIndex, navigateToProblem]);
+
+  const handleKeyboardNext = useCallback(() => {
+    if (effectiveIndex < dueProblems.length - 1) {
+      setIsTransitioning(true);
+      navigateToProblem(effectiveIndex + 1);
+      // Clear transition state quickly for rapid navigation
+      setTimeout(() => setIsTransitioning(false), 25);
+    }
+  }, [effectiveIndex, dueProblems.length, navigateToProblem]);
+
+  // Keyboard navigation: up/left = previous, down/right = next
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Don't handle keys if user is typing in an input, textarea, or contentEditable element
+      const target = event.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Handle arrow keys - use fast navigation handlers
+      if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+        event.preventDefault();
+        handleKeyboardPrevious();
+      } else if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        handleKeyboardNext();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyboardPrevious, handleKeyboardNext]);
 
   if (isLoading) {
     return (
@@ -155,11 +228,12 @@ export function DailyQueue() {
             <div className="relative">
               <div
                 key={currentProblem?.id}
-                className={`transition-all duration-300 ${
+                className={`transition-all ${
                   isTransitioning
                     ? 'opacity-0 blur-sm scale-95'
                     : 'opacity-100 blur-0 scale-100'
                 }`}
+                style={{ transitionDuration: '30ms' }}
               >
                 {currentProblem && (
                   <ProblemCard

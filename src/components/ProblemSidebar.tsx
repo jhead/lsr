@@ -85,6 +85,10 @@ export function ProblemSidebar() {
               <li key={problem.id}>
                 <Link
                   to={`/problem/${problem.id}`}
+                  onClick={() => {
+                    // Dispatch event to trigger transition before navigation
+                    window.dispatchEvent(new Event('problem-navigation-start'));
+                  }}
                   className={`block px-3 py-2 rounded-md text-sm transition-colors no-underline focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-offset-0 visited:text-gray-300 ${
                     isActive
                       ? 'bg-gray-800 text-white font-medium'

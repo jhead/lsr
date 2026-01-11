@@ -190,7 +190,7 @@ export function ProblemCard({ problem, currentIndex, totalCount }: ProblemCardPr
               </span>
             ))}
           </div>
-          <div className="mb-4">
+          <div>
             <p className="text-gray-300 text-sm leading-relaxed mb-4">
               {problem.description}
             </p>
@@ -222,11 +222,11 @@ export function ProblemCard({ problem, currentIndex, totalCount }: ProblemCardPr
       </div>
 
       {!isSubmitted && (
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="mt-6">
+          <div className="flex items-center gap-2 mb-4">
             <button
               onClick={() => setShowStrategy(!showStrategy)}
-              className="px-4 py-2 bg-gray-800 text-white rounded border border-gray-600 hover:bg-gray-700 hover:border-gray-500 transition-colors"
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600/80 to-blue-700/80 text-white rounded-lg border border-blue-500/50 hover:from-blue-500/90 hover:to-blue-600/90 hover:border-blue-400/60 hover:shadow-lg hover:shadow-blue-900/50 transition-all duration-200 font-medium shadow-sm"
             >
               {showStrategy ? 'Hide' : 'Show'} Strategy
             </button>
