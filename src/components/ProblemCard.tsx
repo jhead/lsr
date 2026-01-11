@@ -109,7 +109,6 @@ function StrategyContent({ content }: { content: string }) {
 export function ProblemCard({ problem, currentIndex, totalCount }: ProblemCardProps) {
   const { submitReview } = useApp();
   const [showStrategy, setShowStrategy] = useState(false);
-  const [selectedQuality, setSelectedQuality] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const difficultyColors = {
@@ -118,16 +117,13 @@ export function ProblemCard({ problem, currentIndex, totalCount }: ProblemCardPr
     Hard: 'bg-red-900/30 text-red-300 border-red-700',
   };
 
-  const handleQualitySubmit = () => {
-    if (selectedQuality !== null) {
-      submitReview(problem.id, selectedQuality);
-      setIsSubmitted(true);
-      setShowStrategy(true);
-    }
+  const handleQualityClick = (quality: number) => {
+    submitReview(problem.id, quality);
+    setIsSubmitted(true);
+    setShowStrategy(true);
   };
 
   const handleReset = () => {
-    setSelectedQuality(null);
     setIsSubmitted(false);
     setShowStrategy(false);
   };
@@ -263,12 +259,8 @@ export function ProblemCard({ problem, currentIndex, totalCount }: ProblemCardPr
               {[0, 1, 2, 3, 4, 5].map(quality => (
                 <button
                   key={quality}
-                  onClick={() => setSelectedQuality(quality)}
-                  className={`px-4 py-2 rounded transition-colors ${
-                    selectedQuality === quality
-                      ? 'bg-blue-800 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  }`}
+                  onClick={() => handleQualityClick(quality)}
+                  className="px-4 py-2 rounded transition-colors bg-gray-800 text-gray-300 hover:bg-gray-700"
                 >
                   {quality}
                 </button>
@@ -280,15 +272,6 @@ export function ProblemCard({ problem, currentIndex, totalCount }: ProblemCardPr
               <p>5 = Perfect response</p>
             </div>
           </div>
-
-          {selectedQuality !== null && (
-            <button
-              onClick={handleQualitySubmit}
-              className="mt-4 px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-            >
-              Submit Review
-            </button>
-          )}
         </div>
       )}
 
