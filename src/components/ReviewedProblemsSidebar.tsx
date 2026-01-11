@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
@@ -22,6 +23,10 @@ export function ReviewedProblemsSidebar({ isOpen = true, onClose }: ReviewedProb
   // Extract problem ID from URL path
   const match = location.pathname.match(/\/problem\/(\d+)/);
   const currentProblemId = match ? parseInt(match[1], 10) : null;
+  
+  // Refs for scrolling to active problem
+  const problemItemRefs = useRef<Map<number, HTMLLIElement>>(new Map());
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   const difficultyColors = {
     Easy: 'bg-green-900/30 text-green-300',
@@ -101,11 +106,28 @@ export function ReviewedProblemsSidebar({ isOpen = true, onClose }: ReviewedProb
   });
 
   const totalProblems = reviewedProblems.length;
+  
+  // Scroll to active problem when it changes
+  useEffect(() => {
+    if (!currentProblemId || !sidebarRef.current) return;
+    
+    const problemItem = problemItemRefs.current.get(currentProblemId);
+    if (problemItem) {
+      problemItem.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    }
+  }, [currentProblemId]);
 
   return (
-    <div className={`fixed md:static inset-y-0 right-0 w-80 bg-black border-l border-gray-800 h-screen overflow-y-auto z-40 md:z-auto transform transition-transform duration-300 ease-in-out ${
-      isOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
-    }`}>
+    <div 
+      ref={sidebarRef}
+      className={`fixed md:static inset-y-0 right-0 w-80 bg-black border-l border-gray-800 h-screen overflow-y-auto z-40 md:z-auto transform transition-transform duration-300 ease-in-out ${
+        isOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
+      }`}
+    >
       <div className="p-4 border-b border-gray-800">
         <div className="flex items-baseline justify-between">
           <h2 className="text-lg font-semibold text-white">
@@ -130,7 +152,16 @@ export function ReviewedProblemsSidebar({ isOpen = true, onClose }: ReviewedProb
                   const isActive = currentProblemId === problem.id;
 
                   return (
-                    <li key={problem.id}>
+                    <li 
+                      key={problem.id}
+                      ref={(el) => {
+                        if (el) {
+                          problemItemRefs.current.set(problem.id, el);
+                        } else {
+                          problemItemRefs.current.delete(problem.id);
+                        }
+                      }}
+                    >
                       <Link
                         to={`/problem/${problem.id}`}
                         onClick={() => {

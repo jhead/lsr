@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { FileUploadModal } from './FileUploadModal';
@@ -18,6 +18,11 @@ export function ProblemSidebar({ isOpen = true, onClose }: ProblemSidebarProps) 
   // Extract problem ID from URL path
   const match = location.pathname.match(/\/problem\/(\d+)/);
   const currentProblemId = match ? parseInt(match[1], 10) : null;
+  
+  // Refs for scrolling to active problem
+  const dailyQueueItemRefs = useRef<Map<number, HTMLLIElement>>(new Map());
+  const moreProblemsItemRefs = useRef<Map<number, HTMLLIElement>>(new Map());
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   const difficultyColors = {
     Easy: 'bg-green-900/30 text-green-300',
@@ -61,10 +66,21 @@ export function ProblemSidebar({ isOpen = true, onClose }: ProblemSidebarProps) 
     }
   };
 
-  const renderProblemItem = (problem: LeetCodeProblem) => {
+  const renderProblemItem = (problem: LeetCodeProblem, isDailyQueue: boolean) => {
     const isActive = currentProblemId === problem.id;
+    const refMap = isDailyQueue ? dailyQueueItemRefs : moreProblemsItemRefs;
+    
     return (
-      <li key={problem.id}>
+      <li 
+        key={problem.id}
+        ref={(el) => {
+          if (el) {
+            refMap.current.set(problem.id, el);
+          } else {
+            refMap.current.delete(problem.id);
+          }
+        }}
+      >
         <Link
           to={`/problem/${problem.id}`}
           onClick={() => handleProblemClick(problem.id)}
@@ -89,12 +105,41 @@ export function ProblemSidebar({ isOpen = true, onClose }: ProblemSidebarProps) 
       </li>
     );
   };
+  
+  // Scroll to active problem when it changes
+  useEffect(() => {
+    if (!currentProblemId || !sidebarRef.current) return;
+    
+    // Check if problem is in Daily Queue
+    const dailyQueueItem = dailyQueueItemRefs.current.get(currentProblemId);
+    if (dailyQueueItem) {
+      dailyQueueItem.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+      return;
+    }
+    
+    // Check if problem is in More Problems
+    const moreProblemsItem = moreProblemsItemRefs.current.get(currentProblemId);
+    if (moreProblemsItem) {
+      moreProblemsItem.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    }
+  }, [currentProblemId]);
 
   return (
     <>
-      <div className={`fixed md:static inset-y-0 left-0 w-80 bg-black border-r border-gray-800 h-screen overflow-y-auto z-40 md:z-auto transform transition-transform duration-300 ease-in-out ${
-        isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-      }`}>
+      <div 
+        ref={sidebarRef}
+        className={`fixed md:static inset-y-0 left-0 w-80 bg-black border-r border-gray-800 h-screen overflow-y-auto z-40 md:z-auto transform transition-transform duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
         <div className="px-5 py-4 border-b border-gray-800">
           <div className="flex items-baseline justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -157,7 +202,7 @@ export function ProblemSidebar({ isOpen = true, onClose }: ProblemSidebarProps) 
               </p>
             ) : (
               <ul className="space-y-1">
-                {filteredDailyQueue.map(renderProblemItem)}
+                {filteredDailyQueue.map(problem => renderProblemItem(problem, true))}
               </ul>
             )}
           </nav>
@@ -182,7 +227,7 @@ export function ProblemSidebar({ isOpen = true, onClose }: ProblemSidebarProps) 
               </p>
             ) : (
               <ul className="space-y-1">
-                {filteredMoreProblems.map(renderProblemItem)}
+                {filteredMoreProblems.map(problem => renderProblemItem(problem, false))}
               </ul>
             )}
           </nav>
