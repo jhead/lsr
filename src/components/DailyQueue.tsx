@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { ProblemCard } from './ProblemCard';
+import { FileUpload } from './FileUpload';
 
 export function DailyQueue() {
-  const { dueProblems, isLoading } = useApp();
+  const { problems, dueProblems, isLoading } = useApp();
   const { problemId } = useParams<{ problemId?: string }>();
   const navigate = useNavigate();
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -59,6 +60,11 @@ export function DailyQueue() {
         <div className="text-lg text-gray-400">Loading problems...</div>
       </div>
     );
+  }
+
+  // Show file upload if no problems are loaded
+  if (problems.length === 0) {
+    return <FileUpload />;
   }
 
   const isFirst = effectiveIndex === 0;

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { LeetCodeProblem, UserProgress } from '../types';
-import { loadUserProgress, saveUserProgress, updateProblemProgress } from '../utils/storage';
+import { loadUserProgress, saveUserProgress, updateProblemProgress, loadProblems, saveProblems } from '../utils/storage';
 import { updateSM2, initSM2 } from '../utils/sm2';
 import type { SM2Params } from '../utils/sm2';
 
@@ -10,6 +10,7 @@ interface AppContextType {
   dueProblems: LeetCodeProblem[];
   submitReview: (problemId: number, quality: number) => void;
   isLoading: boolean;
+  setProblems: (problems: LeetCodeProblem[]) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -19,25 +20,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [userProgress, setUserProgress] = useState<UserProgress>({});
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load problems.json on mount
+  // Load problems from localStorage on mount
   useEffect(() => {
-    async function loadProblems() {
-      try {
-        const response = await fetch('/problems.json');
-        if (!response.ok) {
-          throw new Error('Failed to load problems.json');
-        }
-        const data = await response.json();
-        setProblems(data);
-        console.log(`Loaded ${data.length} problems`);
-      } catch (error) {
-        console.error('Error loading problems:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
+    const storedProblems = loadProblems();
+    setProblems(storedProblems);
+    console.log(`Loaded ${storedProblems.length} problems from localStorage`);
+    setIsLoading(false);
+  }, []);
 
-    loadProblems();
+  // Function to set problems (used by file upload)
+  const handleSetProblems = useCallback((newProblems: LeetCodeProblem[]) => {
+    saveProblems(newProblems);
+    setProblems(newProblems);
+    console.log(`Updated problems: ${newProblems.length} problems loaded`);
   }, []);
 
   // Load user progress from localStorage on mount
@@ -106,6 +101,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         dueProblems,
         submitReview,
         isLoading,
+        setProblems: handleSetProblems,
       }}
     >
       {children}
