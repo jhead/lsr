@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { DailyQueue } from './components/DailyQueue';
@@ -34,7 +34,7 @@ function App() {
   return (
     <ThemeProvider>
       <AppProvider>
-        <BrowserRouter basename="/lsr/">
+        <HashRouter>
           <div className="flex h-screen bg-black overflow-hidden">
             {/* Mobile backdrop for left sidebar */}
             {isSidebarOpen && (
@@ -116,7 +116,7 @@ function App() {
               <ReviewedProblemsSidebar isOpen={isReviewedSidebarOpen} onClose={() => setIsReviewedSidebarOpen(false)} />
             )}
           </div>
-        </BrowserRouter>
+        </HashRouter>
       </AppProvider>
     </ThemeProvider>
   );
