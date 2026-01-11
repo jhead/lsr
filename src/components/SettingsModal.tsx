@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { stateManager } from '../utils/stateManager';
+import { QRCodeDisplay } from './QRCodeDisplay';
+import { QRCodeScanner } from './QRCodeScanner';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -14,6 +16,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   // Reset confirm state when modal closes
   useEffect(() => {
@@ -23,6 +27,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       setImportError(null);
       setImportSuccess(false);
       setCopySuccess(false);
+      setShowQRCode(false);
+      setShowQRScanner(false);
     }
   }, [isOpen]);
 
@@ -80,6 +86,36 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     }
   };
 
+  const handleShowQRCode = () => {
+    setShowQRCode(true);
+  };
+
+  const handleQRScan = (data: string) => {
+    try {
+      // Try to deserialize from QR (compressed), fallback to regular deserialize if needed
+      const state = stateManager.deserializeFromQR(data);
+      stateManager.saveAll(state);
+      reloadState();
+      setShowQRScanner(false);
+      setImportSuccess(true);
+      setTimeout(() => {
+        setImportSuccess(false);
+        onClose();
+      }, 2000);
+      console.log('State imported successfully from QR code');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to import state from QR code';
+      setImportError(errorMessage);
+      console.error('Error importing state from QR code:', error);
+      setTimeout(() => setImportError(null), 5000);
+    }
+  };
+
+  const handleQRScanError = (error: string) => {
+    setImportError(`QR Scanner Error: ${error}`);
+    setTimeout(() => setImportError(null), 5000);
+  };
+
   if (!isOpen) {
     return null;
   }
@@ -106,19 +142,45 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <h3 className="text-sm font-semibold text-gray-300 mb-3">
                   Import/Export State
                 </h3>
-                <div className="space-y-3">
-                  <button
-                    onClick={handleExportState}
-                    className="w-full px-4 py-3 rounded-lg font-medium transition-colors bg-blue-900/30 text-blue-300 border border-blue-800/50 hover:bg-blue-900/50"
-                  >
-                    {copySuccess ? '✓ Copied to Clipboard!' : 'Copy State to Clipboard'}
-                  </button>
+                
+                {/* Export Options */}
+                <div className="space-y-3 mb-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={handleExportState}
+                      className="px-4 py-3 rounded-lg font-medium transition-colors bg-blue-900/30 text-blue-300 border border-blue-800/50 hover:bg-blue-900/50 text-sm"
+                    >
+                      {copySuccess ? '✓ Copied!' : 'Copy'}
+                    </button>
+                    <button
+                      onClick={handleShowQRCode}
+                      className="px-4 py-3 rounded-lg font-medium transition-colors bg-purple-900/30 text-purple-300 border border-purple-800/50 hover:bg-purple-900/50 text-sm"
+                    >
+                      Show QR Code
+                    </button>
+                  </div>
                   <p className="text-xs text-gray-500">
                     Export all your data (problems, progress, queue) as JSON
                   </p>
                 </div>
                 
-                <div className="mt-4 space-y-3">
+                {/* Import Options */}
+                <div className="space-y-3">
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      onClick={() => setShowQRScanner(true)}
+                      className="flex-1 px-4 py-3 rounded-lg font-medium transition-colors bg-purple-900/30 text-purple-300 border border-purple-800/50 hover:bg-purple-900/50 text-sm"
+                    >
+                      Scan QR Code
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 my-3">
+                    <div className="flex-1 border-t border-gray-700"></div>
+                    <span className="text-xs text-gray-500">or</span>
+                    <div className="flex-1 border-t border-gray-700"></div>
+                  </div>
+
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Paste State Data
                   </label>
@@ -142,7 +204,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         : 'bg-green-900/30 text-green-300 border border-green-800/50 hover:bg-green-900/50'
                     }`}
                   >
-                    {importSuccess ? '✓ Imported Successfully!' : 'Import State'}
+                    {importSuccess ? '✓ Imported Successfully!' : 'Import from Text'}
                   </button>
                   {importError && (
                     <div className="p-3 bg-red-900/30 border border-red-800/50 rounded-lg">
@@ -216,6 +278,23 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           )}
         </div>
       </div>
+
+      {/* QR Code Display Modal */}
+      {showQRCode && (
+        <QRCodeDisplay
+          data={stateManager.serializeForQR()}
+          onClose={() => setShowQRCode(false)}
+        />
+      )}
+
+      {/* QR Code Scanner Modal */}
+      {showQRScanner && (
+        <QRCodeScanner
+          onScan={handleQRScan}
+          onClose={() => setShowQRScanner(false)}
+          onError={handleQRScanError}
+        />
+      )}
     </div>
   );
 }
