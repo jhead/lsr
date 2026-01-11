@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { ProblemCard } from './ProblemCard';
-import { FileUpload } from './FileUpload';
+import { FileUploadModal } from './FileUploadModal';
 import { SettingsModal } from './SettingsModal';
 import type { LeetCodeProblem } from '../types';
 
@@ -185,41 +185,11 @@ export function DailyQueue() {
     if (!currentProblem) return;
 
     // 1. Calculate Destination (Pre-Update)
-    // We want to navigate to the "next" item in the current visual list.
-    // Since the current item might move or disappear after submission, we determine
-    // the target ID *now* based on the current list state.
-    let nextProblemId: number | null = null;
-
-    if (activeList.length > 0) {
-      if (activeIndex < activeList.length - 1) {
-        // Go to next item
-        nextProblemId = activeList[activeIndex + 1].id;
-      } else {
-        // At end of list
-        if (activeListType === 'daily' && moreProblems.length > 0) {
-          // Daily Queue finished -> Move to "More Problems"
-          nextProblemId = moreProblems[0].id;
-        } else if (activeList.length > 1 || activeListType === 'reviewed') {
-          // Wrap around to start (or stay if only 1 item and reviewed)
-          // For 'daily' or 'more', the current item is removed, so wrapping to 0
-          // actually goes to the *new* first item (which was second).
-          // For 'reviewed', the current item moves to end (likely), so 0 is the *new* first.
-          // In all cases, ID at index 0 is a safe "next" if we are at the end.
-          
-          // Exception: If list has 1 item and it's removed (daily/more), list becomes empty.
-          // But here we checked activeList.length > 1.
-          nextProblemId = activeList[0].id;
-          
-          // Special case: Single item in Reviewed?
-          if (activeListType === 'reviewed' && activeList.length === 1) {
-             nextProblemId = activeList[0].id; // Stay on it
-          }
-        } else {
-          // List will be empty? Fallback to Daily Queue start if possible
-          if (dailyQueue.length > 0) nextProblemId = dailyQueue[0].id;
-        }
-      }
-    }
+    // We navigate to the next logical problem.
+    // For 'reviewed' lists, items move, but 'next' implies chronological progression.
+    // For 'daily'/'more', items are removed, so 'next' implies the one shifting in or next list.
+    // calculateNextProblemId handles these transitions.
+    const nextProblemId = calculateNextProblemId();
 
     // 2. Submit Review (Updates State)
     submitReview(currentProblem.id, quality);
@@ -231,7 +201,7 @@ export function DailyQueue() {
       navigateToId(nextProblemId);
       setTimeout(() => setIsTransitioning(false), 25);
     }
-  }, [activeList, activeListType, activeIndex, currentProblem, dailyQueue, moreProblems, submitReview, navigateToId]);
+  }, [calculateNextProblemId, currentProblem, submitReview, navigateToId]);
 
 
   // 4. Effects
@@ -305,7 +275,7 @@ export function DailyQueue() {
     );
   }
 
-  if (problems.length === 0) return <FileUpload />;
+  if (problems.length === 0) return <FileUploadModal variant="fullpage" />;
 
   // "No problems" state
   // Show if: No ID selected (and queue empty) OR ID selected but not found

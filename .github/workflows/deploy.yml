@@ -35,9 +35,6 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Remove problems.json from build output
-        run: rm -f dist/problems.json
-
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
