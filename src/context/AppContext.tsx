@@ -1,18 +1,13 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { LeetCodeProblem, UserProgress, ProblemProgress, ReviewHistoryEntry } from '../types';
 import { loadUserProgress, saveUserProgress, updateProblemProgress, loadProblems, saveProblems } from '../utils/storage';
+import { stateManager, type DailyQueueData } from '../utils/stateManager';
 import { updateSM2, initSM2, applyFuzzFactor } from '../utils/sm2';
 import type { SM2Params } from '../utils/sm2';
 
 // Configuration constants
 const MAX_UNDO_HISTORY = 10; // Maximum number of reviews to keep for undo
 const NEW_CARDS_PER_DAY = 20; // Maximum new cards to introduce per day
-const DAILY_QUEUE_KEY = 'lcsr-daily-queue';
-
-interface DailyQueueData {
-  date: string; // YYYY-MM-DD format
-  newCardIds: number[]; // IDs of new cards added to queue today
-}
 
 interface AppContextType {
   problems: LeetCodeProblem[];
@@ -27,6 +22,7 @@ interface AppContextType {
   setProblems: (problems: LeetCodeProblem[]) => void;
   clearAllProgress: () => void;
   leechProblems: LeetCodeProblem[]; // Problems that are leeches
+  reloadState: () => void; // Reload all state from localStorage
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -43,31 +39,20 @@ function getTodayString(): string {
  * Load daily queue data from localStorage
  */
 function loadDailyQueue(): DailyQueueData {
-  try {
-    const stored = localStorage.getItem(DAILY_QUEUE_KEY);
-    if (stored) {
-      const data = JSON.parse(stored) as DailyQueueData;
-      // Check if it's still today
-      if (data.date === getTodayString()) {
-        return data;
-      }
-    }
-  } catch (e) {
-    console.error('Error loading daily queue:', e);
+  const data = stateManager.loadDailyQueue();
+  // Check if it's still today
+  if (data.date === getTodayString()) {
+    return data;
   }
   // Return fresh queue for today
-  return { date: getTodayString(), newCardIds: [] };
+  return stateManager.getDefaultDailyQueue();
 }
 
 /**
  * Save daily queue data to localStorage
  */
 function saveDailyQueue(data: DailyQueueData): void {
-  try {
-    localStorage.setItem(DAILY_QUEUE_KEY, JSON.stringify(data));
-  } catch (e) {
-    console.error('Error saving daily queue:', e);
-  }
+  stateManager.saveDailyQueue(data);
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -328,11 +313,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     saveUserProgress({});
     setUndoHistory([]);
     // Reset daily queue
-    const freshQueue = { date: getTodayString(), newCardIds: [] };
+    const freshQueue = stateManager.getDefaultDailyQueue();
     setDailyQueueData(freshQueue);
     saveDailyQueue(freshQueue);
     console.log('Cleared all user progress and daily queue');
   }, []);
+
+  // Reload all state from localStorage (useful after importing state)
+  const reloadState = useCallback(() => {
+    const storedProblems = loadProblems();
+    handleSetProblems(storedProblems);
+    
+    const progress = loadUserProgress();
+    setUserProgress(progress);
+    
+    const queueData = loadDailyQueue();
+    setDailyQueueData(queueData);
+    
+    setUndoHistory([]); // Clear undo history on reload
+    
+    console.log('Reloaded all state from localStorage');
+  }, [handleSetProblems]);
 
   return (
     <AppContext.Provider
@@ -349,6 +350,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setProblems: handleSetProblems,
         clearAllProgress,
         leechProblems,
+        reloadState,
       }}
     >
       {children}

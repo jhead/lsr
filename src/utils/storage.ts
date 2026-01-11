@@ -1,80 +1,53 @@
 import type { UserProgress, LeetCodeProblem } from '../types';
-
-const STORAGE_KEY = 'lsr_user_progress';
-const PROBLEMS_STORAGE_KEY = 'lsr_problems';
+import { stateManager } from './stateManager';
 
 /**
  * Loads user progress from localStorage
+ * @deprecated Use stateManager.loadUserProgress() instead
  */
 export function loadUserProgress(): UserProgress {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      return {};
-    }
-    return JSON.parse(stored) as UserProgress;
-  } catch (error) {
-    console.error('Error loading user progress:', error);
-    return {};
-  }
+  return stateManager.loadUserProgress();
 }
 
 /**
  * Saves user progress to localStorage
+ * @deprecated Use stateManager.saveUserProgress() instead
  */
 export function saveUserProgress(progress: UserProgress): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-  } catch (error) {
-    console.error('Error saving user progress:', error);
-  }
+  stateManager.saveUserProgress(progress);
 }
 
 /**
  * Updates progress for a specific problem
+ * @deprecated Use stateManager.updateProblemProgress() instead
  */
 export function updateProblemProgress(
   problemId: number,
   progress: UserProgress[number]
 ): void {
-  const current = loadUserProgress();
-  current[problemId] = progress;
-  saveUserProgress(current);
+  stateManager.updateProblemProgress(problemId, progress);
 }
 
 /**
  * Gets progress for a specific problem, or returns undefined if not found
+ * @deprecated Use stateManager.getProblemProgress() instead
  */
 export function getProblemProgress(problemId: number): UserProgress[number] | undefined {
-  const progress = loadUserProgress();
-  return progress[problemId];
+  return stateManager.getProblemProgress(problemId);
 }
 
 /**
  * Loads problems from localStorage
+ * @deprecated Use stateManager.loadProblems() instead
  */
 export function loadProblems(): LeetCodeProblem[] {
-  try {
-    const stored = localStorage.getItem(PROBLEMS_STORAGE_KEY);
-    if (!stored) {
-      return [];
-    }
-    return JSON.parse(stored) as LeetCodeProblem[];
-  } catch (error) {
-    console.error('Error loading problems:', error);
-    return [];
-  }
+  return stateManager.loadProblems();
 }
 
 /**
  * Saves problems to localStorage
+ * @deprecated Use stateManager.saveProblems() instead
  */
 export function saveProblems(problems: LeetCodeProblem[]): void {
-  try {
-    localStorage.setItem(PROBLEMS_STORAGE_KEY, JSON.stringify(problems));
-    console.log(`Saved ${problems.length} problems to localStorage`);
-  } catch (error) {
-    console.error('Error saving problems:', error);
-    throw error;
-  }
+  stateManager.saveProblems(problems);
 }

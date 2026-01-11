@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { stateManager } from '../utils/stateManager';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -7,13 +8,21 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const { clearAllProgress, userProgress } = useApp();
+  const { clearAllProgress, userProgress, reloadState } = useApp();
   const [showConfirm, setShowConfirm] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Reset confirm state when modal closes
   useEffect(() => {
     if (!isOpen) {
       setShowConfirm(false);
+      setPasteText('');
+      setImportError(null);
+      setImportSuccess(false);
+      setCopySuccess(false);
     }
   }, [isOpen]);
 
@@ -31,6 +40,44 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const handleCancelClear = () => {
     setShowConfirm(false);
+  };
+
+  const handleExportState = async () => {
+    try {
+      const stateJson = stateManager.serialize();
+      await navigator.clipboard.writeText(stateJson);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 3000);
+      console.log('State exported to clipboard');
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      setImportError('Failed to copy to clipboard. Please try again.');
+      setTimeout(() => setImportError(null), 5000);
+    }
+  };
+
+  const handleImportState = () => {
+    if (!pasteText.trim()) {
+      setImportError('Please paste state data first');
+      return;
+    }
+
+    try {
+      stateManager.importState(pasteText);
+      reloadState();
+      setImportSuccess(true);
+      setPasteText('');
+      setTimeout(() => {
+        setImportSuccess(false);
+        onClose();
+      }, 2000);
+      console.log('State imported successfully');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to import state';
+      setImportError(errorMessage);
+      console.error('Error importing state:', error);
+      setTimeout(() => setImportError(null), 5000);
+    }
   };
 
   if (!isOpen) {
@@ -54,8 +101,63 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
 
           {!showConfirm ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
+                <h3 className="text-sm font-semibold text-gray-300 mb-3">
+                  Import/Export State
+                </h3>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleExportState}
+                    className="w-full px-4 py-3 rounded-lg font-medium transition-colors bg-blue-900/30 text-blue-300 border border-blue-800/50 hover:bg-blue-900/50"
+                  >
+                    {copySuccess ? '✓ Copied to Clipboard!' : 'Copy State to Clipboard'}
+                  </button>
+                  <p className="text-xs text-gray-500">
+                    Export all your data (problems, progress, queue) as JSON
+                  </p>
+                </div>
+                
+                <div className="mt-4 space-y-3">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Paste State Data
+                  </label>
+                  <textarea
+                    value={pasteText}
+                    onChange={(e) => {
+                      setPasteText(e.target.value);
+                      setImportError(null);
+                      setImportSuccess(false);
+                    }}
+                    placeholder="Paste exported state JSON here..."
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={6}
+                  />
+                  <button
+                    onClick={handleImportState}
+                    disabled={!pasteText.trim()}
+                    className={`w-full px-4 py-3 rounded-lg font-medium transition-colors ${
+                      !pasteText.trim()
+                        ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
+                        : 'bg-green-900/30 text-green-300 border border-green-800/50 hover:bg-green-900/50'
+                    }`}
+                  >
+                    {importSuccess ? '✓ Imported Successfully!' : 'Import State'}
+                  </button>
+                  {importError && (
+                    <div className="p-3 bg-red-900/30 border border-red-800/50 rounded-lg">
+                      <p className="text-red-400 text-sm">{importError}</p>
+                    </div>
+                  )}
+                  {importSuccess && (
+                    <div className="p-3 bg-green-900/30 border border-green-800/50 rounded-lg">
+                      <p className="text-green-400 text-sm">State imported successfully! Closing in 2 seconds...</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-gray-800 pt-4">
                 <h3 className="text-sm font-semibold text-gray-300 mb-3">
                   Data Management
                 </h3>
