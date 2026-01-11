@@ -152,10 +152,10 @@ export function DailyQueue() {
   }
 
   return (
-    <div className="flex-1 bg-black py-8 px-4 overflow-y-auto h-full">
+    <div className="flex-1 bg-black py-4 md:py-8 px-2 md:px-4 overflow-y-auto h-full">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-white">
+        <div className="mb-4 md:mb-6 flex items-center justify-between gap-2">
+          <h1 className="text-lg md:text-xl font-bold text-white truncate">
             Leetcode Spaced Repetition
           </h1>
           {dueProblems.length > 0 && (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -7,22 +7,60 @@ import { ProblemSidebar } from './components/ProblemSidebar';
 import { ReviewedProblemsSidebar } from './components/ReviewedProblemsSidebar';
 
 function App() {
+  // On desktop (md and up), sidebars are open by default. On mobile, closed by default.
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isReviewedSidebarOpen, setIsReviewedSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Check if we're on mobile and close sidebars by default
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setIsSidebarOpen(false);
+        setIsReviewedSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+        setIsReviewedSidebarOpen(true);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   return (
     <ThemeProvider>
       <AppProvider>
-        <BrowserRouter>
+        <BrowserRouter basename="/lsr/">
           <div className="flex h-screen bg-black overflow-hidden">
-            {isSidebarOpen && <ProblemSidebar />}
+            {/* Mobile backdrop for left sidebar */}
+            {isSidebarOpen && (
+              <div
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden"
+                onClick={() => setIsSidebarOpen(false)}
+                aria-hidden="true"
+              />
+            )}
+            {/* Mobile backdrop for right sidebar */}
+            {isReviewedSidebarOpen && (
+              <div
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden"
+                onClick={() => setIsReviewedSidebarOpen(false)}
+                aria-hidden="true"
+              />
+            )}
+            {/* On desktop, conditionally render. On mobile, always render with overlay styling. */}
+            {(isSidebarOpen || isMobile) && (
+              <ProblemSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+            )}
             <div className="flex-1 flex flex-col relative h-screen overflow-hidden">
               {/* Left sidebar toggle button */}
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className={`fixed top-4 z-20 p-2 rounded-lg bg-gray-900 border border-gray-800 shadow-md text-gray-400 hover:bg-gray-800 transition-all ${
-                  isSidebarOpen ? 'left-[21rem]' : 'left-4'
-                }`}
+                className="fixed top-4 left-4 md:left-4 z-40 p-2 rounded-lg bg-gray-900 border border-gray-800 shadow-md text-gray-400 hover:bg-gray-800 transition-all md:z-20"
                 aria-label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
                 title={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
               >
@@ -44,9 +82,7 @@ function App() {
               {/* Right sidebar toggle button */}
               <button
                 onClick={() => setIsReviewedSidebarOpen(!isReviewedSidebarOpen)}
-                className={`fixed top-4 z-20 p-2 rounded-lg bg-gray-900 border border-gray-800 shadow-md text-gray-400 hover:bg-gray-800 transition-all ${
-                  isReviewedSidebarOpen ? 'right-[21rem]' : 'right-4'
-                }`}
+                className="fixed top-4 right-4 md:right-4 z-40 p-2 rounded-lg bg-gray-900 border border-gray-800 shadow-md text-gray-400 hover:bg-gray-800 transition-all md:z-20"
                 aria-label={isReviewedSidebarOpen ? 'Hide reviewed sidebar' : 'Show reviewed sidebar'}
                 title={isReviewedSidebarOpen ? 'Hide reviewed sidebar' : 'Show reviewed sidebar'}
               >
@@ -71,7 +107,10 @@ function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </div>
-            {isReviewedSidebarOpen && <ReviewedProblemsSidebar />}
+            {/* On desktop, conditionally render. On mobile, always render with overlay styling. */}
+            {(isReviewedSidebarOpen || isMobile) && (
+              <ReviewedProblemsSidebar isOpen={isReviewedSidebarOpen} onClose={() => setIsReviewedSidebarOpen(false)} />
+            )}
           </div>
         </BrowserRouter>
       </AppProvider>

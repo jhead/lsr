@@ -10,7 +10,12 @@ type ProblemWithProgress = {
   };
 };
 
-export function ReviewedProblemsSidebar() {
+interface ReviewedProblemsSidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function ReviewedProblemsSidebar({ isOpen = true, onClose }: ReviewedProblemsSidebarProps) {
   const { problems, userProgress } = useApp();
   const location = useLocation();
   
@@ -98,7 +103,9 @@ export function ReviewedProblemsSidebar() {
   const totalProblems = reviewedProblems.length;
 
   return (
-    <div className="w-80 bg-black border-l border-gray-800 h-screen overflow-y-auto">
+    <div className={`fixed md:static inset-y-0 right-0 w-80 bg-black border-l border-gray-800 h-screen overflow-y-auto z-40 md:z-auto transform transition-transform duration-300 ease-in-out ${
+      isOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
+    }`}>
       <div className="p-4 border-b border-gray-800">
         <div className="flex items-baseline justify-between">
           <h2 className="text-lg font-semibold text-white">
@@ -129,6 +136,10 @@ export function ReviewedProblemsSidebar() {
                         onClick={() => {
                           // Dispatch event to trigger transition before navigation
                           window.dispatchEvent(new Event('problem-navigation-start'));
+                          // Close sidebar on mobile after navigation
+                          if (onClose) {
+                            onClose();
+                          }
                         }}
                         className={`block px-3 py-2 rounded-md text-sm transition-colors no-underline focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-offset-0 visited:text-gray-300 ${
                           isActive

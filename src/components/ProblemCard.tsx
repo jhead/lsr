@@ -78,15 +78,16 @@ function StrategyContent({ content }: { content: string }) {
           return (
             <div
               key={index}
-              className="rounded-lg overflow-hidden border border-gray-700"
+              className="rounded-lg overflow-hidden border border-gray-700 overflow-x-auto"
             >
               <SyntaxHighlighter
                 language={mapLanguage(part.lang)}
                 style={vscDarkPlus}
                 customStyle={{
                   margin: 0,
-                  padding: '1rem',
+                  padding: '0.75rem',
                   borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
                 }}
               >
                 {part.content}
@@ -132,23 +133,23 @@ export function ProblemCard({ problem, currentIndex, totalCount }: ProblemCardPr
   };
 
   return (
-    <div className="bg-gray-900 rounded-lg shadow-md p-6 border border-gray-800 relative">
+    <div className="bg-gray-900 rounded-lg shadow-md p-4 md:p-6 border border-gray-800 relative">
       {/* Problem counter in top right */}
       {currentIndex !== undefined && totalCount !== undefined && (
-        <div className="absolute top-5 right-5">
-          <div className="px-3 py-1.5 bg-gray-800/60 backdrop-blur-sm rounded-md border border-gray-700/50">
-            <span className="text-sm font-semibold text-gray-300 tabular-nums">
+        <div className="absolute top-3 right-3 md:top-5 md:right-5">
+          <div className="px-2 py-1 md:px-3 md:py-1.5 bg-gray-800/60 backdrop-blur-sm rounded-md border border-gray-700/50">
+            <span className="text-xs md:text-sm font-semibold text-gray-300 tabular-nums">
               <span className="text-white">{currentIndex + 1}</span>
-              <span className="mx-1.5 text-gray-500">/</span>
+              <span className="mx-1 md:mx-1.5 text-gray-500">/</span>
               <span>{totalCount}</span>
             </span>
           </div>
         </div>
       )}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
+      <div className="flex items-start justify-between mb-3 md:mb-4 pr-12 md:pr-0">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-xl font-semibold text-white">
+            <h3 className="text-lg md:text-xl font-semibold text-white break-words">
               {problem.title}
             </h3>
             <a
@@ -197,20 +198,20 @@ export function ProblemCard({ problem, currentIndex, totalCount }: ProblemCardPr
             
             {/* Example */}
             {problem.example && (
-              <div className="bg-black/50 rounded-lg p-4 border border-gray-800">
-                <h4 className="font-semibold text-white mb-3 text-sm">
+              <div className="bg-black/50 rounded-lg p-3 md:p-4 border border-gray-800">
+                <h4 className="font-semibold text-white mb-2 md:mb-3 text-sm">
                   Example:
                 </h4>
                 <div className="space-y-2 text-sm">
                   <div>
                     <span className="font-medium text-gray-300">Input: </span>
-                    <code className="bg-gray-800 text-gray-200 px-2 py-1 rounded font-mono text-xs">
+                    <code className="bg-gray-800 text-gray-200 px-2 py-1 rounded font-mono text-xs break-all">
                       {problem.example.input}
                     </code>
                   </div>
                   <div>
                     <span className="font-medium text-gray-300">Output: </span>
-                    <code className="bg-gray-800 text-gray-200 px-2 py-1 rounded font-mono text-xs">
+                    <code className="bg-gray-800 text-gray-200 px-2 py-1 rounded font-mono text-xs break-all">
                       {problem.example.output}
                     </code>
                   </div>
@@ -226,14 +227,14 @@ export function ProblemCard({ problem, currentIndex, totalCount }: ProblemCardPr
           <div className="flex items-center gap-2 mb-4">
             <button
               onClick={() => setShowStrategy(!showStrategy)}
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-600/80 to-blue-700/80 text-white rounded-lg border border-blue-500/50 hover:from-blue-500/90 hover:to-blue-600/90 hover:border-blue-400/60 hover:shadow-lg hover:shadow-blue-900/50 transition-all duration-200 font-medium shadow-sm"
+              className="px-4 md:px-5 py-2 md:py-2.5 bg-gradient-to-r from-blue-600/80 to-blue-700/80 text-white rounded-lg border border-blue-500/50 hover:from-blue-500/90 hover:to-blue-600/90 hover:border-blue-400/60 hover:shadow-lg hover:shadow-blue-900/50 transition-all duration-200 font-medium shadow-sm text-sm md:text-base"
             >
               {showStrategy ? 'Hide' : 'Show'} Strategy
             </button>
           </div>
 
           {showStrategy && (
-            <div className="bg-black/50 rounded-lg p-4 mb-4 space-y-3 border border-gray-800">
+            <div className="bg-black/50 rounded-lg p-3 md:p-4 mb-4 space-y-3 border border-gray-800 overflow-x-auto">
               <div>
                 <h4 className="font-semibold text-white mb-2">Optimal Strategy</h4>
                 <div className="text-gray-300 text-sm">
