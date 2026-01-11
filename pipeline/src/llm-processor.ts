@@ -1,0 +1,105 @@
+import OpenAI from 'openai';
+import type { LLMResponse } from './types.js';
+
+/**
+ * Processes editorial content using LLM to extract optimal strategy and complexity
+ */
+export class LLMProcessor {
+  private readonly client: OpenAI;
+  private readonly model: string;
+
+  constructor(apiKey: string, model: string = 'gpt-5-mini') {
+    this.client = new OpenAI({ apiKey });
+    this.model = model;
+  }
+
+  /**
+   * Processes problem description and editorial to extract description summary,
+   * optimal strategy, and complexity in a single LLM call
+   */
+  async processProblem(
+    problemTitle: string,
+    descriptionContent: string,
+    editorialContent?: string
+  ): Promise<LLMResponse> {
+    const hasEditorial = editorialContent && editorialContent.trim().length > 0;
+    
+    const prompt = `For the problem "${problemTitle}", provide the following:
+
+1. A 2-3 sentence summary of the problem description (what it asks and key constraints)
+2. An example input/output pair
+3. ${hasEditorial ? 'The ideal approach for use in an interview / tech screen in one sentence, based on the editorial' : 'A note that no editorial is available'}
+4. A TypeScript code snippet demonstrating the optimal approach
+5. Time and space complexity in Big-O notation${hasEditorial ? ', based on the editorial' : ', if determinable from the problem description'}
+
+Note that the most optimal solution is not always the right one to use in an interview, as it may be too complex.
+
+Problem description:
+${descriptionContent}
+
+${hasEditorial ? `Editorial content:\n${editorialContent}` : ''}
+
+Respond in JSON format with the following structure:
+{
+  "description": "2-3 sentence summary of the problem (without example)",
+  "example": {
+    "input": "example input (e.g., \"nums = [1,2,3], target = 5\")",
+    "output": "example output (e.g., \"[0, 2]\")"
+  },
+  "strategy": "${hasEditorial ? 'one sentence optimal approach' : 'No editorial available'}",
+  "codeSnippet": "TypeScript code example",
+  "timeComplexity": "O(...)",
+  "spaceComplexity": "O(...)"
+}`;
+
+    try {
+      const completion = await this.client.chat.completions.create({
+        model: this.model,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are an expert in algorithms and data structures with TypeScript expertise. Summarize problems and extract optimal strategies and complexity from editorial content. Always provide code snippets in TypeScript.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        response_format: { type: 'json_object' },
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from LLM');
+      }
+
+      const parsed = JSON.parse(content) as LLMResponse;
+      
+      // Validate response structure
+      if (!parsed.description || !parsed.example || !parsed.example.input || !parsed.example.output || !parsed.strategy || !parsed.codeSnippet || !parsed.timeComplexity || !parsed.spaceComplexity) {
+        throw new Error('Invalid LLM response structure');
+      }
+
+      return parsed;
+    } catch (error) {
+      console.error(`Error processing LLM request for ${problemTitle}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Strips HTML tags from editorial content
+   */
+  stripHtml(html: string): string {
+    return html
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .trim();
+  }
+}

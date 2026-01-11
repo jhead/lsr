@@ -1,0 +1,23 @@
+{
+  "name": "lsr-ingestion-pipeline",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Ingestion pipeline for LSR - fetches LeetCode problems and extracts optimal strategies using LLM",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "openai": "^4.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
