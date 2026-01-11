@@ -81,15 +81,66 @@ export function DailyQueue() {
   return (
     <div className="flex-1 bg-black py-8 px-4 overflow-y-auto h-full">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6 flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Leetcode Spaced Repetition
-            </h1>
-            <p className="text-gray-400">
-              {dueProblems.length} {dueProblems.length === 1 ? 'problem' : 'problems'} due for review
-            </p>
-          </div>
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-xl font-bold text-white">
+            Leetcode Spaced Repetition
+          </h1>
+          {dueProblems.length > 0 && (
+            <div className="flex gap-2">
+              <button
+                onClick={handlePrevious}
+                disabled={isFirst || isTransitioning}
+                className={`flex items-center justify-center w-9 h-9 rounded-lg border transition-all ${
+                  isFirst || isTransitioning
+                    ? 'border-gray-800 bg-gray-900/50 text-gray-600 cursor-not-allowed'
+                    : 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:border-gray-600 hover:text-white'
+                }`}
+                aria-label="Previous problem"
+                title="Previous problem"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2.5}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.75 19.5L8.25 12l7.5-7.5"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={isLast || isTransitioning}
+                className={`flex items-center justify-center w-9 h-9 rounded-lg border transition-all ${
+                  isLast || isTransitioning
+                    ? 'border-gray-800 bg-gray-900/50 text-gray-600 cursor-not-allowed'
+                    : 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:border-gray-600 hover:text-white'
+                }`}
+                aria-label="Next problem"
+                title="Next problem"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2.5}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
 
         {dueProblems.length === 0 ? (
@@ -99,38 +150,7 @@ export function DailyQueue() {
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Progress indicator */}
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-400">
-                Problem {effectiveIndex + 1} of {dueProblems.length}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handlePrevious}
-                  disabled={isFirst || isTransitioning}
-                  className={`px-4 py-2 rounded transition-colors ${
-                    isFirst || isTransitioning
-                      ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-800 text-white hover:bg-blue-700'
-                  }`}
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={handleNext}
-                  disabled={isLast || isTransitioning}
-                  className={`px-4 py-2 rounded transition-colors ${
-                    isLast || isTransitioning
-                      ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-800 text-white hover:bg-blue-700'
-                  }`}
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-
+          <div>
             {/* Current problem with transition */}
             <div className="relative">
               <div
@@ -141,7 +161,13 @@ export function DailyQueue() {
                     : 'opacity-100 blur-0 scale-100'
                 }`}
               >
-                {currentProblem && <ProblemCard problem={currentProblem} />}
+                {currentProblem && (
+                  <ProblemCard
+                    problem={currentProblem}
+                    currentIndex={effectiveIndex}
+                    totalCount={dueProblems.length}
+                  />
+                )}
               </div>
             </div>
           </div>

@@ -6,6 +6,8 @@ import { useApp } from '../context/AppContext';
 
 interface ProblemCardProps {
   problem: LeetCodeProblem;
+  currentIndex?: number;
+  totalCount?: number;
 }
 
 /**
@@ -103,7 +105,7 @@ function StrategyContent({ content }: { content: string }) {
   );
 }
 
-export function ProblemCard({ problem }: ProblemCardProps) {
+export function ProblemCard({ problem, currentIndex, totalCount }: ProblemCardProps) {
   const { submitReview } = useApp();
   const [showStrategy, setShowStrategy] = useState(false);
   const [selectedQuality, setSelectedQuality] = useState<number | null>(null);
@@ -130,7 +132,19 @@ export function ProblemCard({ problem }: ProblemCardProps) {
   };
 
   return (
-    <div className="bg-gray-900 rounded-lg shadow-md p-6 border border-gray-800">
+    <div className="bg-gray-900 rounded-lg shadow-md p-6 border border-gray-800 relative">
+      {/* Problem counter in top right */}
+      {currentIndex !== undefined && totalCount !== undefined && (
+        <div className="absolute top-5 right-5">
+          <div className="px-3 py-1.5 bg-gray-800/60 backdrop-blur-sm rounded-md border border-gray-700/50">
+            <span className="text-sm font-semibold text-gray-300 tabular-nums">
+              <span className="text-white">{currentIndex + 1}</span>
+              <span className="mx-1.5 text-gray-500">/</span>
+              <span>{totalCount}</span>
+            </span>
+          </div>
+        </div>
+      )}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
