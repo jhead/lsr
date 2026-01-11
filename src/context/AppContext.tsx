@@ -11,6 +11,7 @@ interface AppContextType {
   submitReview: (problemId: number, quality: number) => void;
   isLoading: boolean;
   setProblems: (problems: LeetCodeProblem[]) => void;
+  clearAllProgress: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -93,6 +94,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     console.log(`Review submitted for problem ${problemId} with quality ${quality}:`, newProgress);
   }, [userProgress]);
 
+  // Clear all user progress
+  const clearAllProgress = useCallback(() => {
+    setUserProgress({});
+    saveUserProgress({});
+    console.log('Cleared all user progress');
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -102,6 +110,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         submitReview,
         isLoading,
         setProblems: handleSetProblems,
+        clearAllProgress,
       }}
     >
       {children}

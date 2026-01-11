@@ -3,9 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { ProblemCard } from './ProblemCard';
 import { FileUpload } from './FileUpload';
+import { SettingsModal } from './SettingsModal';
 
 export function DailyQueue() {
-  const { problems, dueProblems, isLoading } = useApp();
+  const { problems, dueProblems, isLoading, submitReview } = useApp();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { problemId } = useParams<{ problemId?: string }>();
   const navigate = useNavigate();
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -98,7 +100,18 @@ export function DailyQueue() {
     }
   }, [effectiveIndex, dueProblems.length, navigateToProblem]);
 
-  // Keyboard navigation: up/left = previous, down/right = next
+  // Handle quality submission and navigation
+  const handleQualitySubmitAndNext = useCallback((quality: number) => {
+    if (currentProblem) {
+      submitReview(currentProblem.id, quality);
+      // Immediately navigate to next problem
+      if (effectiveIndex < dueProblems.length - 1) {
+        handleKeyboardNext();
+      }
+    }
+  }, [currentProblem, submitReview, effectiveIndex, dueProblems.length, handleKeyboardNext]);
+
+  // Keyboard navigation: up/left = previous, down/right = next, 1-5 = submit quality and next
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Don't handle keys if user is typing in an input, textarea, or contentEditable element
@@ -108,6 +121,14 @@ export function DailyQueue() {
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable
       ) {
+        return;
+      }
+
+      // Handle quality keys 1-5 (submit and navigate to next)
+      if (event.key >= '1' && event.key <= '5') {
+        event.preventDefault();
+        const quality = parseInt(event.key, 10);
+        handleQualitySubmitAndNext(quality);
         return;
       }
 
@@ -125,7 +146,7 @@ export function DailyQueue() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleKeyboardPrevious, handleKeyboardNext]);
+  }, [handleKeyboardPrevious, handleKeyboardNext, handleQualitySubmitAndNext]);
 
   if (isLoading) {
     return (
@@ -246,7 +267,33 @@ export function DailyQueue() {
             </div>
           </div>
         )}
+        {/* Settings and GitHub link at bottom */}
+        <div className="mt-8 text-center">
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="text-xs text-gray-500 hover:text-gray-400 transition-colors"
+              aria-label="Settings"
+            >
+              Settings
+            </button>
+            <span className="text-xs text-gray-600">•</span>
+            <a
+              href="https://github.com/jhead"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-gray-500 hover:text-gray-400 transition-colors"
+              aria-label="GitHub profile"
+            >
+              @jhead
+            </a>
+          </div>
+        </div>
       </div>
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </div>
   );
 }
