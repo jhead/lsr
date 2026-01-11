@@ -173,14 +173,75 @@ export function DailyQueue() {
   }
 
   return (
-    <div className="flex-1 bg-black pt-4 md:pt-4 pb-4 md:pb-8 px-2 md:px-4 overflow-y-auto h-full">
+    <div className="flex-1 bg-black pt-14 md:pt-4 pb-4 md:pb-8 px-2 md:px-4 overflow-y-auto h-full">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-4 md:mb-6 flex items-center justify-between gap-2">
-          <h1 className="text-lg md:text-xl font-bold text-white truncate">
-            Leetcode Spaced Repetition
-          </h1>
+        {/* Mobile: Title centered between toggle buttons, Desktop: Title on left */}
+        <div className="mb-4 md:mb-6">
+          <div className="md:flex md:items-center md:justify-between md:gap-2">
+            <h1 className="text-lg md:text-xl font-bold text-white text-center md:text-left md:truncate">
+              Leetcode Spaced Repetition
+            </h1>
+            {/* Desktop: prev/next buttons next to title */}
+            {dueProblems.length > 0 && (
+              <div className="hidden md:flex gap-2">
+                <button
+                  onClick={handlePrevious}
+                  disabled={isFirst || isTransitioning}
+                  className={`flex items-center justify-center w-9 h-9 rounded-lg border transition-all ${
+                    isFirst || isTransitioning
+                      ? 'border-gray-800 bg-gray-900/50 text-gray-600 cursor-not-allowed'
+                      : 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:border-gray-600 hover:text-white'
+                  }`}
+                  aria-label="Previous problem"
+                  title="Previous problem"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2.5}
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.75 19.5L8.25 12l7.5-7.5"
+                    />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleNext}
+                  disabled={isLast || isTransitioning}
+                  className={`flex items-center justify-center w-9 h-9 rounded-lg border transition-all ${
+                    isLast || isTransitioning
+                      ? 'border-gray-800 bg-gray-900/50 text-gray-600 cursor-not-allowed'
+                      : 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:border-gray-600 hover:text-white'
+                  }`}
+                  aria-label="Next problem"
+                  title="Next problem"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2.5}
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                    />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
+          {/* Mobile: prev/next buttons below title */}
           {dueProblems.length > 0 && (
-            <div className="flex gap-2">
+            <div className="flex justify-center gap-2 mt-3 md:hidden">
               <button
                 onClick={handlePrevious}
                 disabled={isFirst || isTransitioning}
