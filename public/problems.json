@@ -346,15 +346,15 @@
       "Counting",
       "Enumeration"
     ],
-    "description": "Given an integer n (1 <= n <= 1e9), determine whether you can reorder its digits (no leading zero allowed) to form a power of two. Because n has at most 10 digits, only powers of two up to 2^29 need to be considered.",
+    "description": "Given an integer n (1 <= n <= 1e9), determine if its digits can be reordered (without leading zeros) to form a power of two. You may rearrange digits arbitrarily, but the resulting number must be an exact power of two. Return true if such a reordering exists, otherwise false.",
     "example": {
-      "input": "n = 1",
+      "input": "n = 46",
       "output": "true"
     },
-    "optimal_strategy": "Compare the multiset of digits of n (e.g., its sorted digit string) with the sorted digit strings of all powers of two from 2^0 to 2^29.\n\n```typescript\nfunction sortedDigits(num: number): string {\n  return String(num).split('').sort().join('');\n}\n\nexport function reorderedPowerOf2(n: number): boolean {\n  const target = sortedDigits(n);\n  // Check all powers of two up to 2^29 (2^29 = 536870912 <= 1e9)\n  for (let i = 0; i < 30; i++) {\n    const powStr = sortedDigits(1 << i);\n    if (powStr === target) return true;\n  }\n  return false;\n}\n\n// Example usage:\n// console.log(reorderedPowerOf2(1)); // true\n// console.log(reorderedPowerOf2(10)); // false\n```",
+    "optimal_strategy": "Compute the digit-frequency signature of n and check if it matches the signature of any power of two up to 2^29.\n\n```typescript\nfunction reorderedPowerOf2(n: number): boolean {\n  const signature = (num: number): string => {\n    const cnt = new Array(10).fill(0);\n    while (num > 0) {\n      cnt[num % 10]++;\n      num = Math.floor(num / 10);\n    }\n    return cnt.join('#');\n  };\n\n  const targetSig = signature(n);\n  for (let i = 0; i <= 29; i++) {\n    const pow = Math.pow(2, i); // 2^0 .. 2^29 cover all powers <= 1e9\n    if (signature(pow) === targetSig) return true;\n  }\n  return false;\n}\n\n// Example usage:\n// console.log(reorderedPowerOf2(46)); // true\n// console.log(reorderedPowerOf2(10)); // false\n\n```",
     "complexity": {
-      "time": "O((log N)^2)  (there are O(log N) candidate powers and comparing/sorting digits costs O(log N))",
-      "space": "O(log N) (space to hold digit strings / counts, proportional to the number of digits)"
+      "time": "O(log^2 N)",
+      "space": "O(log N)"
     }
   },
   {

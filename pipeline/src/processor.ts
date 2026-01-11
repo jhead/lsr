@@ -27,7 +27,7 @@ export class IngestionProcessor {
     outputPath?: string
   ) {
     this.leetcodeClient = new LeetCodeClient();
-    this.llmProcessor = new LLMProcessor(openaiApiKey);
+    this.llmProcessor = new LLMProcessor(openaiApiKey, 'gpt-5-mini');
     this.rateLimitDelay = rateLimitDelay;
     this.maxConcurrency = maxConcurrency;
     this.outputPath = outputPath || join(__dirname, '../../public/problems.json');

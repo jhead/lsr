@@ -8,7 +8,7 @@ export class LLMProcessor {
   private readonly client: OpenAI;
   private readonly model: string;
 
-  constructor(apiKey: string, model: string = 'gpt-5-mini') {
+  constructor(apiKey: string, model: string) {
     this.client = new OpenAI({ apiKey });
     this.model = model;
   }
