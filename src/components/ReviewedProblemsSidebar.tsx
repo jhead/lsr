@@ -136,8 +136,8 @@ export function ReviewedProblemsSidebar({ isOpen = true, onClose }: ReviewedProb
                         onClick={() => {
                           // Dispatch event to trigger transition before navigation
                           window.dispatchEvent(new Event('problem-navigation-start'));
-                          // Close sidebar on mobile after navigation
-                          if (onClose) {
+                          // Close sidebar on mobile after navigation (not on desktop)
+                          if (onClose && window.innerWidth < 768) {
                             onClose();
                           }
                         }}
