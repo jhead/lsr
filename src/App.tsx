@@ -60,7 +60,9 @@ function App() {
               {/* Left sidebar toggle button */}
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="fixed top-4 left-4 md:left-4 z-40 p-2 rounded-lg bg-gray-900 border border-gray-800 shadow-md text-gray-400 hover:bg-gray-800 transition-all md:z-20"
+                className={`fixed top-4 left-4 z-40 p-2 rounded-lg bg-gray-900 border border-gray-800 shadow-md text-gray-400 hover:bg-gray-800 transition-all md:z-20 ${
+                  isSidebarOpen ? 'md:left-[21rem]' : 'md:left-4'
+                }`}
                 aria-label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
                 title={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
               >
@@ -82,7 +84,9 @@ function App() {
               {/* Right sidebar toggle button */}
               <button
                 onClick={() => setIsReviewedSidebarOpen(!isReviewedSidebarOpen)}
-                className="fixed top-4 right-4 md:right-4 z-40 p-2 rounded-lg bg-gray-900 border border-gray-800 shadow-md text-gray-400 hover:bg-gray-800 transition-all md:z-20"
+                className={`fixed top-4 right-4 z-40 p-2 rounded-lg bg-gray-900 border border-gray-800 shadow-md text-gray-400 hover:bg-gray-800 transition-all md:z-20 ${
+                  isReviewedSidebarOpen ? 'md:right-[21rem]' : 'md:right-4'
+                }`}
                 aria-label={isReviewedSidebarOpen ? 'Hide reviewed sidebar' : 'Show reviewed sidebar'}
                 title={isReviewedSidebarOpen ? 'Hide reviewed sidebar' : 'Show reviewed sidebar'}
               >
