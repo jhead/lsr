@@ -4,135 +4,283 @@ import { useApp } from '../context/AppContext';
 import { ProblemCard } from './ProblemCard';
 import { FileUpload } from './FileUpload';
 import { SettingsModal } from './SettingsModal';
+import type { LeetCodeProblem } from '../types';
 
 export function DailyQueue() {
-  const { problems, dueProblems, isLoading, submitReview } = useApp();
+  const { problems, dailyQueue, moreProblems, reviewedProblems, isLoading, submitReview, undoLastReview, canUndo } = useApp();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { problemId } = useParams<{ problemId?: string }>();
   const navigate = useNavigate();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const previousProblemIdRef = useRef<string | undefined>(problemId);
 
-  // Find current problem index based on URL or default to first
-  const currentIndex = problemId
-    ? dueProblems.findIndex((p) => p.id === parseInt(problemId, 10))
-    : 0;
+  // 1. Determine the Current Problem
+  // -------------------------------
+  const problemIdInt = problemId ? parseInt(problemId, 10) : null;
   
-  const effectiveIndex = currentIndex >= 0 ? currentIndex : 0;
-  const currentProblem = dueProblems[effectiveIndex];
+  let currentProblem: LeetCodeProblem | undefined;
+  let activeList: LeetCodeProblem[] = [];
+  let activeListType: 'daily' | 'more' | 'reviewed' | 'all' = 'daily';
+  let activeIndex = -1;
 
-  // Navigate to problem URL
-  const navigateToProblem = useCallback((index: number) => {
-    if (index >= 0 && index < dueProblems.length) {
-      navigate(`/problem/${dueProblems[index].id}`);
+  if (problemIdInt) {
+    // Priority: Daily Queue -> More Problems -> Reviewed -> All
+    
+    // 1. Daily Queue
+    const inQueue = dailyQueue.find(p => p.id === problemIdInt);
+    if (inQueue) {
+      currentProblem = inQueue;
+      activeList = dailyQueue;
+      activeListType = 'daily';
+      activeIndex = dailyQueue.findIndex(p => p.id === problemIdInt);
+    } 
+    // 2. More Problems
+    else {
+      const inMore = moreProblems.find(p => p.id === problemIdInt);
+      if (inMore) {
+        currentProblem = inMore;
+        activeList = moreProblems;
+        activeListType = 'more';
+        activeIndex = moreProblems.findIndex(p => p.id === problemIdInt);
+      }
+      // 3. Reviewed Problems
+      else {
+        const inReviewed = reviewedProblems.find(p => p.id === problemIdInt);
+        if (inReviewed) {
+          currentProblem = inReviewed;
+          activeList = reviewedProblems;
+          activeListType = 'reviewed';
+          activeIndex = reviewedProblems.findIndex(p => p.id === problemIdInt);
+        }
+        // 4. Fallback to all (should be rare given coverage above)
+        else {
+          const inAll = problems.find(p => p.id === problemIdInt);
+          if (inAll) {
+            currentProblem = inAll;
+            activeList = problems; 
+            activeListType = 'all';
+            activeList = []; // Disable navigation for random access
+            activeIndex = -1;
+          }
+        }
+      }
     }
-  }, [dueProblems, navigate]);
-
-  // Navigate to first problem if no problemId in URL and we have problems
-  useEffect(() => {
-    if (!problemId && dueProblems.length > 0) {
-      navigate(`/problem/${dueProblems[0].id}`, { replace: true });
+  } else {
+    // Default to first item in Daily Queue
+    if (dailyQueue.length > 0) {
+      currentProblem = dailyQueue[0];
+      activeList = dailyQueue;
+      activeListType = 'daily';
+      activeIndex = 0;
     }
-  }, [problemId, dueProblems, navigate]);
+  }
 
-  // Listen for navigation events from sidebars to trigger transitions
-  useEffect(() => {
-    const handleNavigationStart = () => {
+  // 2. Navigation Helpers
+  // ---------------------
+  const navigateToId = useCallback((id: number) => {
+    navigate(`/problem/${id}`);
+  }, [navigate]);
+
+  // Calculate Next Problem ID (including cross-list navigation)
+  const calculateNextProblemId = useCallback((): number | null => {
+    if (activeList.length === 0) return null;
+
+    if (activeIndex < activeList.length - 1) {
+      // Go to next item in current list
+      return activeList[activeIndex + 1].id;
+    } 
+    
+    // At end of list - handle transitions
+    if (activeListType === 'daily' && moreProblems.length > 0) {
+      // Daily Queue -> More Problems
+      return moreProblems[0].id;
+    }
+    
+    if (activeListType === 'more' && dailyQueue.length > 0) {
+      // More Problems -> Daily Queue (wrap)
+      return dailyQueue[0].id;
+    }
+
+    // Default wrap behavior within same list if no other list available
+    // or if in 'reviewed' list (which loops)
+    if (activeList.length > 0) {
+      return activeList[0].id;
+    }
+
+    return null;
+  }, [activeList, activeListType, activeIndex, dailyQueue, moreProblems]);
+
+  // Calculate Previous Problem ID (including cross-list navigation)
+  const calculatePrevProblemId = useCallback((): number | null => {
+    if (activeList.length === 0) return null;
+
+    if (activeIndex > 0) {
+      // Go to prev item in current list
+      return activeList[activeIndex - 1].id;
+    }
+
+    // At start of list - handle transitions
+    if (activeListType === 'more' && dailyQueue.length > 0) {
+      // More Problems -> Daily Queue (last item)
+      return dailyQueue[dailyQueue.length - 1].id;
+    }
+
+    if (activeListType === 'daily' && moreProblems.length > 0) {
+      // Daily Queue -> More Problems (last item - wrap backwards)
+      return moreProblems[moreProblems.length - 1].id;
+    }
+
+    // Default wrap behavior within same list
+    if (activeList.length > 0) {
+      return activeList[activeList.length - 1].id;
+    }
+
+    return null;
+  }, [activeList, activeListType, activeIndex, dailyQueue, moreProblems]);
+
+  const handleNext = useCallback(() => {
+    const nextId = calculateNextProblemId();
+    if (nextId !== null && !isTransitioning) {
       setIsTransitioning(true);
-    };
+      setTimeout(() => {
+        navigateToId(nextId);
+        setTimeout(() => setIsTransitioning(false), 25);
+      }, 75);
+    }
+  }, [calculateNextProblemId, isTransitioning, navigateToId]);
+
+  const handlePrevious = useCallback(() => {
+    const prevId = calculatePrevProblemId();
+    if (prevId !== null && !isTransitioning) {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        navigateToId(prevId);
+        setTimeout(() => setIsTransitioning(false), 25);
+      }, 75);
+    }
+  }, [calculatePrevProblemId, isTransitioning, navigateToId]);
+
+  // Fast nav for keyboard (skips transition delay for snappiness)
+  const handleKeyboardNext = useCallback(() => {
+    const nextId = calculateNextProblemId();
+    if (nextId !== null) {
+      setIsTransitioning(true);
+      navigateToId(nextId);
+      setTimeout(() => setIsTransitioning(false), 25);
+    }
+  }, [calculateNextProblemId, navigateToId]);
+
+  const handleKeyboardPrevious = useCallback(() => {
+    const prevId = calculatePrevProblemId();
+    if (prevId !== null) {
+      setIsTransitioning(true);
+      navigateToId(prevId);
+      setTimeout(() => setIsTransitioning(false), 25);
+    }
+  }, [calculatePrevProblemId, navigateToId]);
+
+
+  // Handle review submission + navigation
+  const handleReview = useCallback((quality: number) => {
+    if (!currentProblem) return;
+
+    // 1. Calculate Destination (Pre-Update)
+    // We want to navigate to the "next" item in the current visual list.
+    // Since the current item might move or disappear after submission, we determine
+    // the target ID *now* based on the current list state.
+    let nextProblemId: number | null = null;
+
+    if (activeList.length > 0) {
+      if (activeIndex < activeList.length - 1) {
+        // Go to next item
+        nextProblemId = activeList[activeIndex + 1].id;
+      } else {
+        // At end of list
+        if (activeListType === 'daily' && moreProblems.length > 0) {
+          // Daily Queue finished -> Move to "More Problems"
+          nextProblemId = moreProblems[0].id;
+        } else if (activeList.length > 1 || activeListType === 'reviewed') {
+          // Wrap around to start (or stay if only 1 item and reviewed)
+          // For 'daily' or 'more', the current item is removed, so wrapping to 0
+          // actually goes to the *new* first item (which was second).
+          // For 'reviewed', the current item moves to end (likely), so 0 is the *new* first.
+          // In all cases, ID at index 0 is a safe "next" if we are at the end.
+          
+          // Exception: If list has 1 item and it's removed (daily/more), list becomes empty.
+          // But here we checked activeList.length > 1.
+          nextProblemId = activeList[0].id;
+          
+          // Special case: Single item in Reviewed?
+          if (activeListType === 'reviewed' && activeList.length === 1) {
+             nextProblemId = activeList[0].id; // Stay on it
+          }
+        } else {
+          // List will be empty? Fallback to Daily Queue start if possible
+          if (dailyQueue.length > 0) nextProblemId = dailyQueue[0].id;
+        }
+      }
+    }
+
+    // 2. Submit Review (Updates State)
+    submitReview(currentProblem.id, quality);
+
+    // 3. Navigate (if target found)
+    if (nextProblemId !== null) {
+      setIsTransitioning(true);
+      // Navigate immediately to the pre-calculated ID
+      navigateToId(nextProblemId);
+      setTimeout(() => setIsTransitioning(false), 25);
+    }
+  }, [activeList, activeListType, activeIndex, currentProblem, dailyQueue, moreProblems, submitReview, navigateToId]);
+
+
+  // 4. Effects
+  // ----------
+  
+  // Default redirect if nothing selected
+  useEffect(() => {
+    if (!problemId && dailyQueue.length > 0) {
+      navigate(`/problem/${dailyQueue[0].id}`, { replace: true });
+    }
+  }, [problemId, dailyQueue, navigate]);
+
+  // Transition effect
+  useEffect(() => {
+    const handleNavigationStart = () => setIsTransitioning(true);
     window.addEventListener('problem-navigation-start', handleNavigationStart);
-    return () => {
-      window.removeEventListener('problem-navigation-start', handleNavigationStart);
-    };
+    return () => window.removeEventListener('problem-navigation-start', handleNavigationStart);
   }, []);
 
-  // Trigger transition completion when problemId changes
   useEffect(() => {
-    // Skip on initial mount
     if (previousProblemIdRef.current !== undefined && previousProblemIdRef.current !== problemId) {
-      // Small delay to allow fade-in after URL change
-      const timer = setTimeout(() => {
-        setIsTransitioning(false);
-      }, 25);
+      const timer = setTimeout(() => setIsTransitioning(false), 25);
       return () => clearTimeout(timer);
     }
     previousProblemIdRef.current = problemId;
   }, [problemId]);
 
-  const handlePrevious = useCallback(() => {
-    if (effectiveIndex > 0 && !isTransitioning) {
-      setIsTransitioning(true);
-      // Wait for fade-out animation (75ms), then navigate
-      setTimeout(() => {
-        navigateToProblem(effectiveIndex - 1);
-        setTimeout(() => setIsTransitioning(false), 25);
-      }, 75);
-    }
-  }, [effectiveIndex, isTransitioning, navigateToProblem]);
-
-  const handleNext = useCallback(() => {
-    if (effectiveIndex < dueProblems.length - 1 && !isTransitioning) {
-      setIsTransitioning(true);
-      // Wait for fade-out animation (75ms), then navigate
-      setTimeout(() => {
-        navigateToProblem(effectiveIndex + 1);
-        setTimeout(() => setIsTransitioning(false), 25);
-      }, 75);
-    }
-  }, [effectiveIndex, dueProblems.length, isTransitioning, navigateToProblem]);
-
-  // Fast keyboard navigation: up/left = previous, down/right = next (bypasses transition lock)
-  const handleKeyboardPrevious = useCallback(() => {
-    if (effectiveIndex > 0) {
-      setIsTransitioning(true);
-      navigateToProblem(effectiveIndex - 1);
-      // Clear transition state quickly for rapid navigation
-      setTimeout(() => setIsTransitioning(false), 25);
-    }
-  }, [effectiveIndex, navigateToProblem]);
-
-  const handleKeyboardNext = useCallback(() => {
-    if (effectiveIndex < dueProblems.length - 1) {
-      setIsTransitioning(true);
-      navigateToProblem(effectiveIndex + 1);
-      // Clear transition state quickly for rapid navigation
-      setTimeout(() => setIsTransitioning(false), 25);
-    }
-  }, [effectiveIndex, dueProblems.length, navigateToProblem]);
-
-  // Handle quality submission and navigation
-  const handleQualitySubmitAndNext = useCallback((quality: number) => {
-    if (currentProblem) {
-      submitReview(currentProblem.id, quality);
-      // Immediately navigate to next problem
-      if (effectiveIndex < dueProblems.length - 1) {
-        handleKeyboardNext();
-      }
-    }
-  }, [currentProblem, submitReview, effectiveIndex, dueProblems.length, handleKeyboardNext]);
-
-  // Keyboard navigation: up/left = previous, down/right = next, 1-5 = submit quality and next
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Don't handle keys if user is typing in an input, textarea, or contentEditable element
       const target = event.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
-        return;
-      }
+      if (['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable) return;
 
-      // Handle quality keys 1-5 (submit and navigate to next)
-      if (event.key >= '1' && event.key <= '5') {
+      // Quality keys 0-5
+      // Prevent rapid submitting while transitioning to avoid race conditions
+      if (event.key >= '0' && event.key <= '5' && currentProblem && !isTransitioning) {
         event.preventDefault();
-        const quality = parseInt(event.key, 10);
-        handleQualitySubmitAndNext(quality);
+        handleReview(parseInt(event.key, 10));
+        return;
+      }
+      
+      // Undo
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+        event.preventDefault();
+        undoLastReview();
         return;
       }
 
-      // Handle arrow keys - use fast navigation handlers
+      // Arrows
       if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
         event.preventDefault();
         handleKeyboardPrevious();
@@ -143,11 +291,12 @@ export function DailyQueue() {
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [handleKeyboardPrevious, handleKeyboardNext, handleQualitySubmitAndNext]);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentProblem, undoLastReview, handleKeyboardPrevious, handleKeyboardNext, handleReview, isTransitioning]);
 
+
+  // 5. Render
+  // ---------
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-black h-full">
@@ -156,33 +305,67 @@ export function DailyQueue() {
     );
   }
 
-  // Show file upload if no problems are loaded
-  if (problems.length === 0) {
-    return <FileUpload />;
-  }
+  if (problems.length === 0) return <FileUpload />;
 
-  const isFirst = effectiveIndex === 0;
-  const isLast = effectiveIndex === dueProblems.length - 1;
-
-  if (!currentProblem && !isLoading) {
+  // "No problems" state
+  // Show if: No ID selected (and queue empty) OR ID selected but not found
+  if ((!problemId && dailyQueue.length === 0) || (problemId && !currentProblem)) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-black h-full">
-        <div className="text-lg text-gray-400">Problem not found</div>
+      <div className="flex-1 bg-black pt-14 md:pt-4 pb-4 md:pb-8 px-2 md:px-4 overflow-y-auto h-full">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-gray-900 rounded-lg shadow-md p-8 text-center border border-gray-800">
+            <p className="text-lg text-gray-400">
+              {dailyQueue.length === 0 ? "🎉 No problems due for review today!" : "Problem not found"}
+            </p>
+            {dailyQueue.length === 0 && (
+               <div className="space-y-2 mt-2">
+                 {moreProblems.length > 0 && (
+                   <p className="text-sm text-gray-500">
+                     Check "More Problems" in the sidebar for new challenges!
+                   </p>
+                 )}
+                 {reviewedProblems.length > 0 && (
+                   <p className="text-sm text-gray-500">
+                     Or review your completed problems in the "Reviewed" section.
+                   </p>
+                 )}
+               </div>
+            )}
+          </div>
+          
+          {/* Footer for this state */}
+          <div className="mt-8 text-center">
+            <div className="flex items-center justify-center gap-3">
+               {canUndo && (
+                <button onClick={undoLastReview} className="text-xs text-amber-500 flex items-center gap-1">
+                   Undo
+                </button>
+               )}
+               <button onClick={() => setIsSettingsOpen(true)} className="text-xs text-gray-500">Settings</button>
+            </div>
+          </div>
+        </div>
+        <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       </div>
     );
   }
 
+  // Active Problem State
+  const isFirst = activeIndex <= 0;
+  const isLast = activeIndex >= activeList.length - 1;
+  const showNavButtons = activeList.length > 1;
+
   return (
     <div className="flex-1 bg-black pt-14 md:pt-4 pb-4 md:pb-8 px-2 md:px-4 overflow-y-auto h-full">
       <div className="max-w-4xl mx-auto">
-        {/* Mobile: Title centered between toggle buttons, Desktop: Title on left */}
         <div className="mb-4 md:mb-6">
           <div className="md:flex md:items-center md:justify-between md:gap-2">
             <h1 className="text-lg md:text-xl font-bold text-white text-center md:text-left md:truncate">
               Leetcode Spaced Repetition
             </h1>
-            {/* Desktop: prev/next buttons next to title */}
-            {dueProblems.length > 0 && (
+            
+            {/* Desktop Nav */}
+            {showNavButtons && (
               <div className="hidden md:flex gap-2">
                 <button
                   onClick={handlePrevious}
@@ -190,25 +373,10 @@ export function DailyQueue() {
                   className={`flex items-center justify-center w-9 h-9 rounded-lg border transition-all ${
                     isFirst || isTransitioning
                       ? 'border-gray-800 bg-gray-900/50 text-gray-600 cursor-not-allowed'
-                      : 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:border-gray-600 hover:text-white'
+                      : 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700'
                   }`}
-                  aria-label="Previous problem"
-                  title="Previous problem"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2.5}
-                    stroke="currentColor"
-                    className="w-5 h-5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15.75 19.5L8.25 12l7.5-7.5"
-                    />
-                  </svg>
+                  ←
                 </button>
                 <button
                   onClick={handleNext}
@@ -216,145 +384,75 @@ export function DailyQueue() {
                   className={`flex items-center justify-center w-9 h-9 rounded-lg border transition-all ${
                     isLast || isTransitioning
                       ? 'border-gray-800 bg-gray-900/50 text-gray-600 cursor-not-allowed'
-                      : 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:border-gray-600 hover:text-white'
+                      : 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700'
                   }`}
-                  aria-label="Next problem"
-                  title="Next problem"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2.5}
-                    stroke="currentColor"
-                    className="w-5 h-5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M8.25 4.5l7.5 7.5-7.5 7.5"
-                    />
-                  </svg>
+                  →
                 </button>
               </div>
             )}
           </div>
-          {/* Mobile: prev/next buttons below title */}
-          {dueProblems.length > 0 && (
+
+           {/* Mobile Nav */}
+           {showNavButtons && (
             <div className="flex justify-center gap-2 mt-3 md:hidden">
               <button
                 onClick={handlePrevious}
                 disabled={isFirst || isTransitioning}
-                className={`flex items-center justify-center w-9 h-9 rounded-lg border transition-all ${
-                  isFirst || isTransitioning
-                    ? 'border-gray-800 bg-gray-900/50 text-gray-600 cursor-not-allowed'
-                    : 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:border-gray-600 hover:text-white'
+                className={`flex items-center justify-center w-9 h-9 rounded-lg border ${
+                    isFirst || isTransitioning ? 'border-gray-800 text-gray-600' : 'border-gray-700 text-gray-300'
                 }`}
-                aria-label="Previous problem"
-                title="Previous problem"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2.5}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.75 19.5L8.25 12l7.5-7.5"
-                  />
-                </svg>
+                ←
               </button>
               <button
                 onClick={handleNext}
                 disabled={isLast || isTransitioning}
-                className={`flex items-center justify-center w-9 h-9 rounded-lg border transition-all ${
-                  isLast || isTransitioning
-                    ? 'border-gray-800 bg-gray-900/50 text-gray-600 cursor-not-allowed'
-                    : 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:border-gray-600 hover:text-white'
+                className={`flex items-center justify-center w-9 h-9 rounded-lg border ${
+                    isLast || isTransitioning ? 'border-gray-800 text-gray-600' : 'border-gray-700 text-gray-300'
                 }`}
-                aria-label="Next problem"
-                title="Next problem"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2.5}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M8.25 4.5l7.5 7.5-7.5 7.5"
-                  />
-                </svg>
+                →
               </button>
             </div>
           )}
         </div>
 
-        {dueProblems.length === 0 ? (
-          <div className="bg-gray-900 rounded-lg shadow-md p-8 text-center border border-gray-800">
-            <p className="text-lg text-gray-400">
-              🎉 No problems due for review today!
-            </p>
-          </div>
-        ) : (
-          <div>
-            {/* Current problem with transition */}
-            <div className="relative">
-              <div
-                key={currentProblem?.id}
-                className={`transition-all ${
-                  isTransitioning
-                    ? 'opacity-0 blur-sm scale-95'
-                    : 'opacity-100 blur-0 scale-100'
-                }`}
-                style={{ transitionDuration: '30ms' }}
-              >
-                {currentProblem && (
-                  <ProblemCard
-                    problem={currentProblem}
-                    currentIndex={effectiveIndex}
-                    totalCount={dueProblems.length}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-        {/* Settings and GitHub link at bottom */}
+        {/* Card */}
+        <div className="relative">
+           <div
+             key={currentProblem?.id}
+             className={`transition-all duration-100 ${
+               isTransitioning ? 'opacity-0 blur-sm scale-95' : 'opacity-100 blur-0 scale-100'
+             }`}
+           >
+             {currentProblem && (
+               <ProblemCard
+                 problem={currentProblem}
+                 currentIndex={activeListType !== 'all' ? activeIndex : undefined}
+                 totalCount={activeListType !== 'all' ? activeList.length : undefined}
+                 onReviewSubmitted={handleReview}
+               />
+             )}
+           </div>
+        </div>
+
+        {/* Footer */}
         <div className="mt-8 text-center">
-          <div className="flex items-center justify-center gap-3">
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className="text-xs text-gray-500 hover:text-gray-400 transition-colors"
-              aria-label="Settings"
-            >
-              Settings
-            </button>
-            <span className="text-xs text-gray-600">•</span>
-            <a
-              href="https://github.com/jhead"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-gray-500 hover:text-gray-400 transition-colors"
-              aria-label="GitHub profile"
-            >
-              @jhead
-            </a>
-          </div>
+            <div className="flex items-center justify-center gap-3">
+              {canUndo && (
+                <button onClick={undoLastReview} className="text-xs text-amber-500 hover:text-amber-400 flex items-center gap-1">
+                  Undo (Z)
+                </button>
+              )}
+              <span className="text-xs text-gray-600">•</span>
+              <button onClick={() => setIsSettingsOpen(true)} className="text-xs text-gray-500 hover:text-gray-400">Settings</button>
+              <span className="text-xs text-gray-600">•</span>
+              <a href="https://github.com/jhead" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:text-gray-400">@jhead</a>
+            </div>
         </div>
       </div>
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-      />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 }

@@ -4,10 +4,21 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import type { LeetCodeProblem } from '../types';
 import { useApp } from '../context/AppContext';
 
+// Quality score descriptions for the full scale
+const QUALITY_DESCRIPTIONS: Record<number, string> = {
+  0: 'Complete blackout',
+  1: 'Incorrect, but remembered upon seeing answer',
+  2: 'Incorrect, but answer felt familiar',
+  3: 'Correct with serious difficulty',
+  4: 'Correct with hesitation',
+  5: 'Perfect response',
+};
+
 interface ProblemCardProps {
   problem: LeetCodeProblem;
   currentIndex?: number;
   totalCount?: number;
+  onReviewSubmitted?: (quality: number) => void;
 }
 
 /**
@@ -106,10 +117,12 @@ function StrategyContent({ content }: { content: string }) {
   );
 }
 
-export function ProblemCard({ problem, currentIndex, totalCount }: ProblemCardProps) {
-  const { submitReview } = useApp();
+export function ProblemCard({ problem, currentIndex, totalCount, onReviewSubmitted }: ProblemCardProps) {
+  const { userProgress } = useApp();
+  const progress = userProgress[problem.id];
+  const isLeech = progress?.isLeech ?? false;
+  const lapseCount = progress?.lapseCount ?? 0;
   const [showStrategy, setShowStrategy] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const difficultyColors = {
     Easy: 'bg-green-900/30 text-green-300 border-green-700',
@@ -118,18 +131,37 @@ export function ProblemCard({ problem, currentIndex, totalCount }: ProblemCardPr
   };
 
   const handleQualityClick = (quality: number) => {
-    submitReview(problem.id, quality);
-    setIsSubmitted(true);
-    setShowStrategy(true);
-  };
-
-  const handleReset = () => {
-    setIsSubmitted(false);
-    setShowStrategy(false);
+    //submitReview(problem.id, quality); // Handled by parent now
+    onReviewSubmitted?.(quality); // Pass quality to parent
   };
 
   return (
-    <div className="bg-gray-900 rounded-lg shadow-md p-4 md:p-6 border border-gray-800 relative">
+    <div className={`bg-gray-900 rounded-lg shadow-md p-4 md:p-6 border relative ${isLeech ? 'border-orange-700/60' : 'border-gray-800'}`}>
+      {/* Leech warning banner */}
+      {isLeech && (
+        <div className="mb-4 px-3 py-2 bg-orange-900/30 border border-orange-700/50 rounded-lg">
+          <div className="flex items-center gap-2 text-orange-300 text-sm">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="w-5 h-5 flex-shrink-0"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+              />
+            </svg>
+            <span>
+              <strong>Leech detected</strong> — This problem has been failed {lapseCount} times. Consider reviewing the fundamentals or breaking it into smaller concepts.
+            </span>
+          </div>
+        </div>
+      )}
+      
       {/* Problem counter in top right */}
       {currentIndex !== undefined && totalCount !== undefined && (
         <div className="absolute top-3 right-3 md:top-5 md:right-5">
@@ -178,7 +210,7 @@ export function ProblemCard({ problem, currentIndex, totalCount }: ProblemCardPr
             >
               {problem.difficulty}
             </span>
-            {(showStrategy || isSubmitted) && problem.tags.map(tag => (
+            {showStrategy && problem.tags.map(tag => (
               <span
                 key={tag}
                 className="px-2 py-1 bg-gray-800 text-gray-300 rounded text-sm"
@@ -218,74 +250,62 @@ export function ProblemCard({ problem, currentIndex, totalCount }: ProblemCardPr
         </div>
       </div>
 
-      {!isSubmitted && (
-        <div className="mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <button
-              onClick={() => setShowStrategy(!showStrategy)}
-              className="px-4 md:px-5 py-2 md:py-2.5 bg-gradient-to-r from-blue-600/80 to-blue-700/80 text-white rounded-lg border border-blue-500/50 hover:from-blue-500/90 hover:to-blue-600/90 hover:border-blue-400/60 hover:shadow-lg hover:shadow-blue-900/50 transition-all duration-200 font-medium shadow-sm text-sm md:text-base"
-            >
-              {showStrategy ? 'Hide' : 'Show'} Strategy
-            </button>
-          </div>
-
-          {showStrategy && (
-            <div className="bg-black/50 rounded-lg p-3 md:p-4 mb-4 space-y-3 border border-gray-800 overflow-x-auto">
-              <div>
-                <h4 className="font-semibold text-white mb-2">Optimal Strategy</h4>
-                <div className="text-gray-300 text-sm">
-                  <StrategyContent content={problem.optimal_strategy} />
-                </div>
-              </div>
-              <div>
-                <h4 className="font-semibold text-white mb-2">Complexity</h4>
-                <div className="flex gap-4 text-sm text-gray-300">
-                  <span>
-                    <span className="font-medium">Time:</span> {problem.complexity.time}
-                  </span>
-                  <span>
-                    <span className="font-medium">Space:</span> {problem.complexity.space}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="border-t border-gray-800 pt-4">
-            <label className="block text-sm font-medium text-gray-300 mb-3">
-              How well did you recall the strategy? (0-5)
-            </label>
-            <div className="flex gap-2 flex-wrap">
-              {[0, 1, 2, 3, 4, 5].map(quality => (
-                <button
-                  key={quality}
-                  onClick={() => handleQualityClick(quality)}
-                  className="px-4 py-2 rounded transition-colors bg-gray-800 text-gray-300 hover:bg-gray-700"
-                >
-                  {quality}
-                </button>
-              ))}
-            </div>
-            <div className="mt-3 text-xs text-gray-400">
-              <p>0 = Complete blackout</p>
-              <p>3 = Correct response with difficulty</p>
-              <p>5 = Perfect response</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isSubmitted && (
-        <div className="bg-green-900/20 border border-green-800 rounded-lg p-4">
-          <p className="text-green-300 font-medium mb-2">Review submitted successfully!</p>
+      <div className="mt-6">
+        <div className="flex items-center gap-2 mb-4">
           <button
-            onClick={handleReset}
-            className="text-sm text-green-400 hover:text-green-300 underline"
+            onClick={() => setShowStrategy(!showStrategy)}
+            className="px-4 md:px-5 py-2 md:py-2.5 bg-gradient-to-r from-blue-600/80 to-blue-700/80 text-white rounded-lg border border-blue-500/50 hover:from-blue-500/90 hover:to-blue-600/90 hover:border-blue-400/60 hover:shadow-lg hover:shadow-blue-900/50 transition-all duration-200 font-medium shadow-sm text-sm md:text-base"
           >
-            Review again
+            {showStrategy ? 'Hide' : 'Show'} Strategy
           </button>
         </div>
-      )}
+
+        {showStrategy && (
+          <div className="bg-black/50 rounded-lg p-3 md:p-4 mb-4 space-y-3 border border-gray-800 overflow-x-auto">
+            <div>
+              <h4 className="font-semibold text-white mb-2">Optimal Strategy</h4>
+              <div className="text-gray-300 text-sm">
+                <StrategyContent content={problem.optimal_strategy} />
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold text-white mb-2">Complexity</h4>
+              <div className="flex gap-4 text-sm text-gray-300">
+                <span>
+                  <span className="font-medium">Time:</span> {problem.complexity.time}
+                </span>
+                <span>
+                  <span className="font-medium">Space:</span> {problem.complexity.space}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="border-t border-gray-800 pt-4">
+          <label className="block text-sm font-medium text-gray-300 mb-3">
+            How well did you recall the strategy? (0-5)
+          </label>
+          <div className="flex gap-2 flex-wrap">
+            {[0, 1, 2, 3, 4, 5].map(quality => (
+              <button
+                key={quality}
+                onClick={() => handleQualityClick(quality)}
+                className="px-4 py-2 rounded transition-colors bg-gray-800 text-gray-300 hover:bg-gray-700"
+              >
+                {quality}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-400">
+            {Object.entries(QUALITY_DESCRIPTIONS).map(([score, desc]) => (
+              <p key={score}>
+                <span className="font-medium text-gray-300">{score}</span> = {desc}
+              </p>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
