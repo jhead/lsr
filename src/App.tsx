@@ -57,11 +57,11 @@ function App() {
               <ProblemSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
             )}
             <div className="flex-1 flex flex-col relative h-screen overflow-hidden">
-              {/* Left sidebar toggle button */}
+              {/* Left sidebar toggle button - hidden on mobile when sidebar is open */}
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                 className={`fixed top-4 left-4 z-40 p-2 rounded-lg bg-gray-900 border border-gray-800 shadow-md text-gray-400 hover:bg-gray-800 transition-all md:z-20 ${
-                  isSidebarOpen ? 'md:left-[21rem]' : 'md:left-4'
+                  isSidebarOpen ? 'md:left-[21rem] hidden md:block' : 'md:left-4'
                 }`}
                 aria-label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
                 title={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
@@ -81,11 +81,11 @@ function App() {
                   />
                 </svg>
               </button>
-              {/* Right sidebar toggle button */}
+              {/* Right sidebar toggle button - hidden on mobile when sidebar is open */}
               <button
                 onClick={() => setIsReviewedSidebarOpen(!isReviewedSidebarOpen)}
                 className={`fixed top-4 right-4 z-40 p-2 rounded-lg bg-gray-900 border border-gray-800 shadow-md text-gray-400 hover:bg-gray-800 transition-all md:z-20 ${
-                  isReviewedSidebarOpen ? 'md:right-[21rem]' : 'md:right-4'
+                  isReviewedSidebarOpen ? 'md:right-[21rem] hidden md:block' : 'md:right-4'
                 }`}
                 aria-label={isReviewedSidebarOpen ? 'Hide reviewed sidebar' : 'Show reviewed sidebar'}
                 title={isReviewedSidebarOpen ? 'Hide reviewed sidebar' : 'Show reviewed sidebar'}
