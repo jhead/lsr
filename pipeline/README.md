@@ -1,6 +1,6 @@
 # LSR Ingestion Pipeline
 
-This is the ingestion pipeline for LSR (LeetCode Strategy Retention). It fetches problem data from LeetCode's GraphQL API and uses an LLM to extract optimal strategies and complexity information.
+This is the ingestion pipeline for LSR. It fetches problem data from LeetCode's GraphQL API and uses an LLM to extract optimal strategies and complexity information.
 
 ## Setup
 

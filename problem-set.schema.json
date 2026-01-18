@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jhead/lsr/problem-set.schema.json",
+  "title": "Problem Set",
+  "type": "array",
+  "items": { "$ref": "#/$defs/problem" },
+  "$defs": {
+    "problem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "slug",
+        "difficulty",
+        "tags",
+        "description",
+        "example",
+        "optimal_strategy",
+        "complexity"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "slug": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["Easy", "Medium", "Hard"]
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "example": {
+          "$ref": "#/$defs/example"
+        },
+        "optimal_strategy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "complexity": {
+          "$ref": "#/$defs/complexity"
+        }
+      }
+    },
+    "example": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input", "output"],
+      "properties": {
+        "input": { "type": "string" },
+        "output": { "type": "string" }
+      }
+    },
+    "complexity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["time", "space"],
+      "properties": {
+        "time": { "type": "string", "minLength": 1 },
+        "space": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
