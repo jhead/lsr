@@ -46,3 +46,36 @@ This will clear all completed problems/ratings as if starting from scratch.
 
 If you copy your state beforehand, you can import it again after resetting to restore it to the prior state.
 
+## Importing Problems
+
+The app comes with gpt-5-mini processed Leetcode top 150 using the code under `pipeline/`.
+You can freely create and import your own problem set using the following schema.
+
+[Problem json schema](./problem-set.schema.json)
+
+### Example Problem JSON
+
+```json
+[
+  {
+    "id": 20,
+    "title": "Valid Parentheses",
+    "slug": "valid-parentheses",
+    "difficulty": "Easy",
+    "tags": [
+      "String",
+      "Stack"
+    ],
+    "description": "Given a string s containing only the characters '()[]{}', determine whether the string is a valid parentheses sequence: every closing bracket must match the most recent unmatched opening bracket of the same type and all brackets must be closed. Constraints: 1 <= s.length <= 10^4.",
+    "example": {
+      "input": "s = \"([])\"",
+      "output": "true"
+    },
+    "optimal_strategy": "Use a stack: push opening brackets, and for each closing bracket check the stack top matches the corresponding opening bracket and pop it; reject on mismatch or if the stack is empty, and accept only if the stack is empty at the end.\n\n```typescript\nfunction isValid(s: string): boolean {\n  const pairs: Record<string, string> = { ')': '(', '}': '{', ']': '[' };\n  const stack: string[] = [];\n\n  for (const ch of s) {\n    if (ch === '(' || ch === '{' || ch === '[') {\n      stack.push(ch);\n    } else {\n      if (stack.length === 0 || stack[stack.length - 1] !== pairs[ch]) {\n        return false;\n      }\n      stack.pop();\n    }\n  }\n\n  return stack.length === 0;\n}\n\n// Example usage:\n// console.log(isValid(\"([])\")); // true\n```",
+    "complexity": {
+      "time": "O(n)",
+      "space": "O(n)"
+    }
+  }
+]
+```
