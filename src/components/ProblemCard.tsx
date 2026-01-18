@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { AlertTriangle, ExternalLink } from 'lucide-react';
 import type { LeetCodeProblem } from '../types';
 import { useApp } from '../context/AppContext';
 
@@ -141,20 +142,7 @@ export function ProblemCard({ problem, currentIndex, totalCount, onReviewSubmitt
       {isLeech && (
         <div className="mb-4 px-3 py-2 bg-orange-900/30 border border-orange-700/50 rounded-lg">
           <div className="flex items-center gap-2 text-orange-300 text-sm">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-5 h-5 flex-shrink-0"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-              />
-            </svg>
+            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
             <span>
               <strong>Leech detected</strong> — This problem has been failed {lapseCount} times. Consider reviewing the fundamentals or breaking it into smaller concepts.
             </span>
@@ -188,20 +176,7 @@ export function ProblemCard({ problem, currentIndex, totalCount, onReviewSubmitt
               aria-label={`Open ${problem.title} on LeetCode`}
               title="Open on LeetCode"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className="w-4 h-4 text-gray-400"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
-                />
-              </svg>
+              <ExternalLink className="w-4 h-4 text-gray-400" />
             </a>
           </div>
           <div className="flex items-center gap-2 flex-wrap mb-3">

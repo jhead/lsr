@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Menu } from 'lucide-react';
 import { AppProvider } from './context/AppContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { DailyQueue } from './components/DailyQueue';
 import { ProblemSidebar } from './components/ProblemSidebar';
 import { ReviewedProblemsSidebar } from './components/ReviewedProblemsSidebar';
+import { URLImportHandler } from './components/URLImportHandler';
 
-function App() {
+function AppContent() {
   // On desktop (md and up), sidebars are open by default. On mobile, closed by default.
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isReviewedSidebarOpen, setIsReviewedSidebarOpen] = useState(true);
@@ -32,9 +34,7 @@ function App() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <AppProvider>
-        <HashRouter>
+    <HashRouter>
           <div className="flex h-screen bg-black overflow-hidden">
             {/* Mobile backdrop for left sidebar */}
             {isSidebarOpen && (
@@ -66,20 +66,7 @@ function App() {
                 aria-label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
                 title={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                  />
-                </svg>
+                <Menu className="w-5 h-5" />
               </button>
               {/* Right sidebar toggle button - hidden on mobile when sidebar is open */}
               <button
@@ -90,24 +77,12 @@ function App() {
                 aria-label={isReviewedSidebarOpen ? 'Hide reviewed sidebar' : 'Show reviewed sidebar'}
                 title={isReviewedSidebarOpen ? 'Hide reviewed sidebar' : 'Show reviewed sidebar'}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                  />
-                </svg>
+                <Menu className="w-5 h-5" />
               </button>
               <Routes>
                 <Route path="/" element={<DailyQueue />} />
                 <Route path="/problem/:problemId" element={<DailyQueue />} />
+                <Route path="/import/:data" element={<URLImportHandler />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </div>
@@ -117,6 +92,14 @@ function App() {
             )}
           </div>
         </HashRouter>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppProvider>
+        <AppContent />
       </AppProvider>
     </ThemeProvider>
   );

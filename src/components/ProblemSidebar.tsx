@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { CloudUpload } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { FileUploadModal } from './FileUploadModal';
 import type { LeetCodeProblem } from '../types';
@@ -152,20 +153,7 @@ export function ProblemSidebar({ isOpen = true, onClose }: ProblemSidebarProps) 
                 title="Replace problem set"
                 aria-label="Replace problem set"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className="w-4 h-4"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                  />
-                </svg>
+                <CloudUpload className="w-4 h-4" />
               </button>
             </div>
             <span className="ml-2 text-xs text-gray-400">

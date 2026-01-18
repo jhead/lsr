@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { CloudUpload } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import type { LeetCodeProblem } from '../types';
 
@@ -158,20 +159,7 @@ export function FileUploadModal({ isOpen = true, onClose, variant = 'modal' }: F
   const cardContent = (
         <div className="bg-gray-900 rounded-lg shadow-md p-8 text-center border border-gray-800">
           <div className="mb-6">
-            <svg
-              className={`mx-auto ${isModal ? 'h-12 w-12' : 'h-16 w-16'} text-gray-400 mb-4`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-              />
-            </svg>
+            <CloudUpload className={`mx-auto ${isModal ? 'h-12 w-12' : 'h-16 w-16'} text-gray-400 mb-4`} />
             <h2 className={`${isModal ? 'text-xl' : 'text-2xl'} font-bold text-white mb-2`}>
               {isModal ? 'Replace Problem Set' : 'Upload Problems File'}
             </h2>
