@@ -306,11 +306,16 @@ export function DailyQueue() {
           {/* Footer for this state */}
           <div className="mt-8 text-center">
             <div className="flex items-center justify-center gap-3">
+               <span className="text-xs text-gray-600 font-mono">{__APP_VERSION__.slice(0, 7)}</span>
                {canUndo && (
-                <button onClick={undoLastReview} className="text-xs text-amber-500 flex items-center gap-1">
-                   Undo
-                </button>
+                <>
+                  <span className="text-xs text-gray-600">•</span>
+                  <button onClick={undoLastReview} className="text-xs text-amber-500 flex items-center gap-1">
+                     Undo
+                  </button>
+                </>
                )}
+               <span className="text-xs text-gray-600">•</span>
                <button onClick={() => setIsSettingsOpen(true)} className="text-xs text-gray-500">Settings</button>
             </div>
           </div>
@@ -410,10 +415,14 @@ export function DailyQueue() {
         {/* Footer */}
         <div className="mt-8 text-center">
             <div className="flex items-center justify-center gap-3">
+              <span className="text-xs text-gray-600 font-mono">{__APP_VERSION__.slice(0, 7)}</span>
               {canUndo && (
-                <button onClick={undoLastReview} className="text-xs text-amber-500 hover:text-amber-400 flex items-center gap-1">
-                  Undo (Z)
-                </button>
+                <>
+                  <span className="text-xs text-gray-600">•</span>
+                  <button onClick={undoLastReview} className="text-xs text-amber-500 hover:text-amber-400 flex items-center gap-1">
+                    Undo (Z)
+                  </button>
+                </>
               )}
               <span className="text-xs text-gray-600">•</span>
               <button onClick={() => setIsSettingsOpen(true)} className="text-xs text-gray-500 hover:text-gray-400">Settings</button>
