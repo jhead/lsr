@@ -235,9 +235,9 @@ export function DailyQueue() {
       const target = event.target as HTMLElement;
       if (['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable) return;
 
-      // Quality keys 0-5
+      // Quality keys 0-5 (only without modifier keys to avoid conflicts with browser shortcuts like CMD+1)
       // Prevent rapid submitting while transitioning to avoid race conditions
-      if (event.key >= '0' && event.key <= '5' && currentProblem && !isTransitioning) {
+      if (event.key >= '0' && event.key <= '5' && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey && currentProblem && !isTransitioning) {
         event.preventDefault();
         handleReview(parseInt(event.key, 10));
         return;
