@@ -33,6 +33,9 @@ export class LLMProcessor {
 5. Time and space complexity in Big-O notation${hasEditorial ? ', based on the editorial' : ', based on your analysis'}
 
 Note that the most optimal solution is not always the right one to use in an interview, as it may be too complex.
+For instance, if a problem is designed to be solved using a heap, the optimal strategy should be to use a heap even if there's technically a more optimal solution.
+
+Do not include any hints about time/space complexity in your problem description, only in the dedicated timeComplexity and spaceComplexity fields.
 
 Problem description:
 ${descriptionContent}
