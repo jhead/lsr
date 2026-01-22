@@ -29,7 +29,7 @@ export class LLMProcessor {
 1. A 2-3 sentence summary of the problem description (what it asks and key constraints)
 2. An example input/output pair
 3. ${hasEditorial ? 'The ideal approach for use in an interview / tech screen in one sentence, based on the editorial' : 'The ideal approach for use in an interview / tech screen in one sentence, based on your analysis of the problem'}
-4. A TypeScript code snippet demonstrating the optimal approach
+4. A TypeScript (preferred) code snippet demonstrating the optimal approach (or the otherwise correct language for the problem, e.g. SQL)
 5. Time and space complexity in Big-O notation${hasEditorial ? ', based on the editorial' : ', based on your analysis'}
 
 Note that the most optimal solution is not always the right one to use in an interview, as it may be too complex.
@@ -50,7 +50,7 @@ Respond in JSON format with the following structure:
     "output": "example output (e.g., \"[0, 2]\")"
   },
   "strategy": "one sentence optimal approach${hasEditorial ? ' based on the editorial' : ' for interview use'}",
-  "codeSnippet": "TypeScript code example",
+  "codeSnippet": "\`\`\`language\nCode example\n\`\`\`",
   "timeComplexity": "O(...)",
   "spaceComplexity": "O(...)"
 }`;
@@ -62,7 +62,7 @@ Respond in JSON format with the following structure:
           {
             role: 'system',
             content:
-              'You are an expert in algorithms and data structures with TypeScript expertise. When an editorial is provided, extract optimal strategies and complexity from it. When no editorial is available, analyze the problem yourself and provide an interview-optimal solution. Always provide code snippets in TypeScript.',
+              'You are an expert in algorithms and data structures for interview prep. When an editorial is provided, extract optimal strategies and complexity from it. When no editorial is available, analyze the problem yourself and provide an interview-optimal solution. Always provide code snippets in the correct language.',
           },
           {
             role: 'user',

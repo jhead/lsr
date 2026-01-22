@@ -157,12 +157,12 @@
     "tags": [
       "Database"
     ],
-    "description": "Given an Employee table with id and salary columns, return the second highest distinct salary; if fewer than two distinct salaries exist, return null. The result should be a single value named SecondHighestSalary.",
+    "description": "Given an Employee table with unique employee ids and their salaries, return the second highest DISTINCT salary. If a second distinct salary does not exist (e.g., only one unique salary), return null. The output must be a single row with the column name SecondHighestSalary.",
     "example": {
-      "input": "Employee salaries = [100, 200, 300]",
-      "output": "200"
+      "input": "Employee = [{id: 1, salary: 100}, {id: 2, salary: 200}, {id: 3, salary: 300}]",
+      "output": "SecondHighestSalary = 200"
     },
-    "optimal_strategy": "Remove duplicate salaries, sort the distinct salaries in descending order and return the second element (or NULL if it doesn't exist) — in SQL: use DISTINCT, ORDER BY salary DESC LIMIT 1 OFFSET 1 (wrapped to return NULL if absent).\n\n```typescript\nfunction secondHighestSalary(salaries: number[]): number | null {\n  // Remove duplicates\n  const unique = Array.from(new Set(salaries));\n  // If fewer than 2 distinct salaries, return null\n  if (unique.length < 2) return null;\n  // Sort descending and return the second element\n  unique.sort((a, b) => b - a);\n  return unique[1];\n}\n\n// Example usage:\nconsole.log(secondHighestSalary([100, 200, 300])); // 200\nconsole.log(secondHighestSalary([100])); // null\nconsole.log(secondHighestSalary([200, 200, 100])); // 100\n```",
+    "optimal_strategy": "Select distinct salaries, sort them in descending order, and use LIMIT with OFFSET to fetch the second value, wrapping it in a scalar subquery so the result is a single row (null if missing).\n\n```sql\nSELECT\n  (SELECT DISTINCT Salary\n   FROM Employee\n   ORDER BY Salary DESC\n   LIMIT 1 OFFSET 1) AS SecondHighestSalary;\n```",
     "complexity": {
       "time": "O(n log n)",
       "space": "O(n)"

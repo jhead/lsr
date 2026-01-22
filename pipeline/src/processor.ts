@@ -113,7 +113,23 @@ export class IngestionProcessor {
       );
 
       // Combine strategy and code snippet with backticks for code block (TypeScript)
-      const optimalStrategy = `${llmResult.strategy}\n\n\`\`\`typescript\n${llmResult.codeSnippet}\n\`\`\``;
+      // Detect if llmResult.codeSnippet already has ```lang tags, if so preserve them, else default to typescript and add them.
+      let code = llmResult.codeSnippet.trim();
+      let optimalStrategy;
+
+      // Regex to check for ```<lang>\n ... ```
+      const codeBlockRegex = /^```([a-zA-Z0-9+]*)\n[\s\S]*```$/;
+      if (codeBlockRegex.test(code)) {
+        // Already a code block, preserve as is
+        optimalStrategy = `${llmResult.strategy}\n\n${code}`;
+        // assign to the outer variable (legacy interface)
+        // but keep outer reference for rest of file
+        // (let/const hoist edge-case covered)
+      } else {
+        // No code block, add default
+        code = `\`\`\`typescript\n${code}\n\`\`\``;
+        optimalStrategy = `${llmResult.strategy}\n\n${code}`;
+      }
 
       const result: LeetCodeProblem = {
         id: parseInt(problem.questionId),
