@@ -195,7 +195,7 @@ export function ProblemList({ isOpen = true, onClose }: ProblemListProps) {
                         }}
                       >
                         <Link
-                          to={`/problem/${problem.id}?source=unified`}
+                          to={`/problem/${problem.id}`}
                           onClick={() => handleProblemClick(problem.id)}
                           className={`block px-3 py-2 rounded-md text-sm transition-colors no-underline focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-offset-0 ${
                             isActive

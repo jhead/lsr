@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { ProblemCard } from './ProblemCard';
 import { FileUploadModal } from './FileUploadModal';
@@ -8,16 +8,12 @@ import { getUnifiedProblemList } from '../utils/problemUtils';
 import type { LeetCodeProblem } from '../types';
 
 export function DailyQueue() {
-  const { problems, dailyQueue, moreProblems, reviewedProblems, isLoading, submitReview, undoLastReview, canUndo, userProgress, dailyQueueNewCardIds, removeFromDailyQueue } = useApp();
+  const { problems, dailyQueue, isLoading, submitReview, undoLastReview, canUndo, userProgress, dailyQueueNewCardIds, removeFromDailyQueue } = useApp();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { problemId } = useParams<{ problemId?: string }>();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const previousProblemIdRef = useRef<string | undefined>(problemId);
-  
-  // Check if navigation originated from a specific source
-  const sourceParam = searchParams.get('source');
 
   // Build daily queue ID set for shared sorting logic
   const dailyQueueIds = useMemo(() => new Set(dailyQueue.map(p => p.id)), [dailyQueue]);
@@ -35,84 +31,25 @@ export function DailyQueue() {
   const unifiedProblems = useMemo(() => unifiedList.map(item => item.problem), [unifiedList]);
   
   // Determine current problem and active list for navigation
-  const { currentProblem, activeList, activeListType, activeIndex } = useMemo(() => {
+  const { currentProblem, activeList, activeIndex } = useMemo(() => {
     let current: LeetCodeProblem | undefined;
     let active: LeetCodeProblem[] = [];
-    let type: 'daily' | 'more' | 'reviewed' | 'unified' | 'all' = 'unified';
     let index = -1;
 
     if (problemIdInt) {
-      // When source=unified (from the unified ProblemList), use unified list for navigation
-      if (sourceParam === 'unified') {
-        const unifiedIndex = unifiedProblems.findIndex(p => p.id === problemIdInt);
-        if (unifiedIndex !== -1) {
-          current = unifiedProblems[unifiedIndex];
-          active = unifiedProblems;
-          type = 'unified';
-          index = unifiedIndex;
-        } else {
-          // Fallback if not found (shouldn't happen)
-          const inAll = problems.find(p => p.id === problemIdInt);
-          if (inAll) {
-            current = inAll;
-            active = unifiedProblems;
-            type = 'unified';
-            index = -1;
-          }
-        }
-      }
-      // When source=reviewed, prioritize the reviewed list for navigation
-      else if (sourceParam === 'reviewed') {
-        // Priority: Reviewed -> Daily Queue -> More Problems -> All
-        const inReviewed = reviewedProblems.find(p => p.id === problemIdInt);
-        if (inReviewed) {
-          current = inReviewed;
-          active = reviewedProblems;
-          type = 'reviewed';
-          index = reviewedProblems.findIndex(p => p.id === problemIdInt);
-        } else {
-          // Fallback if not in reviewed list
-          const inQueue = dailyQueue.find(p => p.id === problemIdInt);
-          if (inQueue) {
-            current = inQueue;
-            active = dailyQueue;
-            type = 'daily';
-            index = dailyQueue.findIndex(p => p.id === problemIdInt);
-          } else {
-            const inMore = moreProblems.find(p => p.id === problemIdInt);
-            if (inMore) {
-              current = inMore;
-              active = moreProblems;
-              type = 'more';
-              index = moreProblems.findIndex(p => p.id === problemIdInt);
-            } else {
-              const inAll = problems.find(p => p.id === problemIdInt);
-              if (inAll) {
-                current = inAll;
-                active = [];
-                type = 'all';
-                index = -1;
-              }
-            }
-          }
-        }
+      // Always use unified list for consistent navigation
+      const unifiedIndex = unifiedProblems.findIndex(p => p.id === problemIdInt);
+      if (unifiedIndex !== -1) {
+        current = unifiedProblems[unifiedIndex];
+        active = unifiedProblems;
+        index = unifiedIndex;
       } else {
-        // Default: Use unified list for consistent navigation
-        const unifiedIndex = unifiedProblems.findIndex(p => p.id === problemIdInt);
-        if (unifiedIndex !== -1) {
-          current = unifiedProblems[unifiedIndex];
+        // Fallback if not found
+        const inAll = problems.find(p => p.id === problemIdInt);
+        if (inAll) {
+          current = inAll;
           active = unifiedProblems;
-          type = 'unified';
-          index = unifiedIndex;
-        } else {
-          // Fallback if not found
-          const inAll = problems.find(p => p.id === problemIdInt);
-          if (inAll) {
-            current = inAll;
-            active = unifiedProblems;
-            type = 'unified';
-            index = -1;
-          }
+          index = -1;
         }
       }
     } else {
@@ -120,100 +57,44 @@ export function DailyQueue() {
       if (unifiedProblems.length > 0) {
         current = unifiedProblems[0];
         active = unifiedProblems;
-        type = 'unified';
         index = 0;
       }
     }
 
-    return { currentProblem: current, activeList: active, activeListType: type, activeIndex: index };
-  }, [problemIdInt, sourceParam, unifiedProblems, problems, reviewedProblems, dailyQueue, moreProblems]);
+    return { currentProblem: current, activeList: active, activeIndex: index };
+  }, [problemIdInt, unifiedProblems, problems]);
 
   // 2. Navigation Helpers
   // ---------------------
-  const navigateToId = useCallback((id: number, preserveSource: boolean = true) => {
-    // Preserve source param when navigating within the same context
-    if (preserveSource && sourceParam) {
-      navigate(`/problem/${id}?source=${sourceParam}`);
-    } else {
-      navigate(`/problem/${id}`);
-    }
-  }, [navigate, sourceParam]);
+  const navigateToId = useCallback((id: number) => {
+    navigate(`/problem/${id}`);
+  }, [navigate]);
 
-  // Calculate Next Problem ID (including cross-list navigation)
+  // Calculate Next Problem ID
   const calculateNextProblemId = useCallback((): number | null => {
     if (activeList.length === 0) return null;
 
     if (activeIndex < activeList.length - 1) {
-      // Go to next item in current list
+      // Go to next item in list
       return activeList[activeIndex + 1].id;
     } 
     
-    // At end of list - handle transitions based on list type
-    if (activeListType === 'unified') {
-      // Unified list wraps within itself
-      return activeList[0].id;
-    }
-    
-    if (activeListType === 'reviewed') {
-      // Reviewed list wraps within itself
-      return activeList[0].id;
-    }
-    
-    if (activeListType === 'daily' && moreProblems.length > 0) {
-      // Daily Queue -> More Problems
-      return moreProblems[0].id;
-    }
-    
-    if (activeListType === 'more' && dailyQueue.length > 0) {
-      // More Problems -> Daily Queue (wrap)
-      return dailyQueue[0].id;
-    }
+    // At end of list - wrap to beginning
+    return activeList[0].id;
+  }, [activeList, activeIndex]);
 
-    // Default wrap behavior within same list if no other list available
-    if (activeList.length > 0) {
-      return activeList[0].id;
-    }
-
-    return null;
-  }, [activeList, activeListType, activeIndex, dailyQueue, moreProblems]);
-
-  // Calculate Previous Problem ID (including cross-list navigation)
+  // Calculate Previous Problem ID
   const calculatePrevProblemId = useCallback((): number | null => {
     if (activeList.length === 0) return null;
 
     if (activeIndex > 0) {
-      // Go to prev item in current list
+      // Go to prev item in list
       return activeList[activeIndex - 1].id;
     }
 
-    // At start of list - handle transitions based on list type
-    if (activeListType === 'unified') {
-      // Unified list wraps within itself
-      return activeList[activeList.length - 1].id;
-    }
-    
-    if (activeListType === 'reviewed') {
-      // Reviewed list wraps within itself
-      return activeList[activeList.length - 1].id;
-    }
-
-    if (activeListType === 'more' && dailyQueue.length > 0) {
-      // More Problems -> Daily Queue (last item)
-      return dailyQueue[dailyQueue.length - 1].id;
-    }
-
-    if (activeListType === 'daily' && moreProblems.length > 0) {
-      // Daily Queue -> More Problems (last item - wrap backwards)
-      return moreProblems[moreProblems.length - 1].id;
-    }
-
-    // Default wrap behavior within same list
-    if (activeList.length > 0) {
-      return activeList[activeList.length - 1].id;
-    }
-
-    return null;
-  }, [activeList, activeListType, activeIndex, dailyQueue, moreProblems]);
+    // At start of list - wrap to end
+    return activeList[activeList.length - 1].id;
+  }, [activeList, activeIndex]);
 
   const handleNext = useCallback(() => {
     const nextId = calculateNextProblemId();
@@ -287,7 +168,7 @@ export function DailyQueue() {
   // Default redirect if nothing selected - use unified list order
   useEffect(() => {
     if (!problemId && unifiedProblems.length > 0) {
-      navigate(`/problem/${unifiedProblems[0].id}?source=unified`, { replace: true });
+      navigate(`/problem/${unifiedProblems[0].id}`, { replace: true });
     }
   }, [problemId, unifiedProblems, navigate]);
 
@@ -484,8 +365,8 @@ export function DailyQueue() {
              {currentProblem && (
                <ProblemCard
                  problem={currentProblem}
-                 currentIndex={activeListType !== 'all' ? activeIndex : undefined}
-                 totalCount={activeListType !== 'all' ? activeList.length : undefined}
+                 currentIndex={activeIndex}
+                 totalCount={activeList.length}
                  onReviewSubmitted={handleReview}
                  canSkip={dailyQueueNewCardIds.includes(currentProblem.id)}
                  onSkip={() => {

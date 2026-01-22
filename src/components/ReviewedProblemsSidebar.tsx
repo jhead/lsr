@@ -185,7 +185,7 @@ export function ReviewedProblemsSidebar({ isOpen = true, onClose }: ReviewedProb
                       }}
                     >
                       <Link
-                        to={`/problem/${problem.id}?source=reviewed`}
+                        to={`/problem/${problem.id}`}
                         onClick={() => {
                           // Dispatch event to trigger transition before navigation
                           window.dispatchEvent(new Event('problem-navigation-start'));
