@@ -4,27 +4,23 @@ import { Menu } from 'lucide-react';
 import { AppProvider } from './context/AppContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { DailyQueue } from './components/DailyQueue';
-import { ProblemSidebar } from './components/ProblemSidebar';
-import { ReviewedProblemsSidebar } from './components/ReviewedProblemsSidebar';
+import { ProblemList } from './components/ProblemList';
 import { URLImportHandler } from './components/URLImportHandler';
 
 function AppContent() {
-  // On desktop (md and up), sidebars are open by default. On mobile, closed by default.
+  // On desktop (md and up), sidebar is open by default. On mobile, closed by default.
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isReviewedSidebarOpen, setIsReviewedSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Check if we're on mobile and close sidebars by default
+    // Check if we're on mobile and close sidebar by default
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
       if (mobile) {
         setIsSidebarOpen(false);
-        setIsReviewedSidebarOpen(false);
       } else {
         setIsSidebarOpen(true);
-        setIsReviewedSidebarOpen(true);
       }
     };
 
@@ -36,7 +32,7 @@ function AppContent() {
   return (
     <HashRouter>
           <div className="flex h-screen bg-black overflow-hidden">
-            {/* Mobile backdrop for left sidebar */}
+            {/* Mobile backdrop for sidebar */}
             {isSidebarOpen && (
               <div
                 className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden"
@@ -44,20 +40,12 @@ function AppContent() {
                 aria-hidden="true"
               />
             )}
-            {/* Mobile backdrop for right sidebar */}
-            {isReviewedSidebarOpen && (
-              <div
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden"
-                onClick={() => setIsReviewedSidebarOpen(false)}
-                aria-hidden="true"
-              />
-            )}
-            {/* On desktop, conditionally render. On mobile, always render with overlay styling. */}
+            {/* Unified ProblemList sidebar - On desktop, conditionally render. On mobile, always render with overlay styling. */}
             {(isSidebarOpen || isMobile) && (
-              <ProblemSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+              <ProblemList isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
             )}
             <div className="flex-1 flex flex-col relative h-screen overflow-hidden">
-              {/* Left sidebar toggle button - hidden on mobile when sidebar is open */}
+              {/* Sidebar toggle button - hidden on mobile when sidebar is open */}
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                 className={`fixed top-4 left-4 z-40 p-2 rounded-lg bg-gray-900 border border-gray-800 shadow-md text-gray-400 hover:bg-gray-800 transition-all md:z-20 ${
@@ -68,17 +56,6 @@ function AppContent() {
               >
                 <Menu className="w-5 h-5" />
               </button>
-              {/* Right sidebar toggle button - hidden on mobile when sidebar is open */}
-              <button
-                onClick={() => setIsReviewedSidebarOpen(!isReviewedSidebarOpen)}
-                className={`fixed top-4 right-4 z-40 p-2 rounded-lg bg-gray-900 border border-gray-800 shadow-md text-gray-400 hover:bg-gray-800 transition-all md:z-20 ${
-                  isReviewedSidebarOpen ? 'md:right-[21rem] hidden md:block' : 'md:right-4'
-                }`}
-                aria-label={isReviewedSidebarOpen ? 'Hide reviewed sidebar' : 'Show reviewed sidebar'}
-                title={isReviewedSidebarOpen ? 'Hide reviewed sidebar' : 'Show reviewed sidebar'}
-              >
-                <Menu className="w-5 h-5" />
-              </button>
               <Routes>
                 <Route path="/" element={<DailyQueue />} />
                 <Route path="/problem/:problemId" element={<DailyQueue />} />
@@ -86,10 +63,6 @@ function AppContent() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </div>
-            {/* On desktop, conditionally render. On mobile, always render with overlay styling. */}
-            {(isReviewedSidebarOpen || isMobile) && (
-              <ReviewedProblemsSidebar isOpen={isReviewedSidebarOpen} onClose={() => setIsReviewedSidebarOpen(false)} />
-            )}
           </div>
         </HashRouter>
   );

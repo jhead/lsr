@@ -8,6 +8,7 @@ type ProblemWithProgress = {
   difficulty: 'Easy' | 'Medium' | 'Hard';
   progress: {
     nextReview: number;
+    easinessFactor: number;
   };
 };
 
@@ -78,9 +79,30 @@ export function ReviewedProblemsSidebar({ isOpen = true, onClose }: ReviewedProb
     return groups;
   }, {} as Record<string, ProblemWithProgress[]>);
 
-  // Sort problems within each group by next review date
+  // Sort problems within each group
+  // For "Overdue" and "Today" groups, use the same sort as Daily Queue (overdue-ness + EF)
+  // For future groups, sort by next review date
+  const now = Date.now();
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  
   Object.keys(groupedProblems).forEach((key) => {
-    groupedProblems[key].sort((a, b) => a.progress.nextReview - b.progress.nextReview);
+    if (key === 'Overdue' || key === 'Today') {
+      // Match Daily Queue sort: most overdue first, then by lowest EF
+      groupedProblems[key].sort((a, b) => {
+        const overdueA = a.progress.nextReview - now;
+        const overdueB = b.progress.nextReview - now;
+        
+        if (Math.abs(overdueA - overdueB) < DAY_MS) {
+          // Within same day, sort by lowest EF (struggling cards first)
+          return a.progress.easinessFactor - b.progress.easinessFactor;
+        }
+        
+        return overdueA - overdueB;
+      });
+    } else {
+      // Future groups: sort by next review date (soonest first)
+      groupedProblems[key].sort((a, b) => a.progress.nextReview - b.progress.nextReview);
+    }
   });
 
   // Define group order
@@ -163,7 +185,7 @@ export function ReviewedProblemsSidebar({ isOpen = true, onClose }: ReviewedProb
                       }}
                     >
                       <Link
-                        to={`/problem/${problem.id}`}
+                        to={`/problem/${problem.id}?source=reviewed`}
                         onClick={() => {
                           // Dispatch event to trigger transition before navigation
                           window.dispatchEvent(new Event('problem-navigation-start'));

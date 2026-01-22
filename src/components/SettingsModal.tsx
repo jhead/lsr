@@ -9,7 +9,7 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const { clearAllProgress, userProgress, problems, reloadState } = useApp();
+  const { clearAllProgress, userProgress, problems, reloadState, settings, updateSettings } = useApp();
   const [showConfirm, setShowConfirm] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
@@ -31,6 +31,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       console.error('Error generating share URL:', error);
       return null;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProgress, problems]);
 
   // Check if Web Share API is available
@@ -190,7 +191,36 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {!showConfirm ? (
             <div className="space-y-6">
+              {/* Daily Limits Section */}
               <div>
+                <h3 className="text-sm font-semibold text-gray-300 mb-3">
+                  Daily Limits
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <label htmlFor="newCardsPerDay" className="text-sm text-gray-400">
+                      New problems per day
+                    </label>
+                    <input
+                      type="number"
+                      id="newCardsPerDay"
+                      min="0"
+                      max="100"
+                      value={settings.newCardsPerDay}
+                      onChange={(e) => {
+                        const value = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
+                        updateSettings({ newCardsPerDay: value });
+                      }}
+                      className="w-20 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Maximum number of new problems added to your daily queue (in addition to reviews)
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-800 pt-4">
                 <h3 className="text-sm font-semibold text-gray-300 mb-3">
                   Import/Export State
                 </h3>

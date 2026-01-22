@@ -20,6 +20,8 @@ interface ProblemCardProps {
   currentIndex?: number;
   totalCount?: number;
   onReviewSubmitted?: (quality: number) => void;
+  canSkip?: boolean;
+  onSkip?: () => void;
 }
 
 /**
@@ -118,7 +120,7 @@ function StrategyContent({ content }: { content: string }) {
   );
 }
 
-export function ProblemCard({ problem, currentIndex, totalCount, onReviewSubmitted }: ProblemCardProps) {
+export function ProblemCard({ problem, currentIndex, totalCount, onReviewSubmitted, canSkip, onSkip }: ProblemCardProps) {
   const { userProgress } = useApp();
   const progress = userProgress[problem.id];
   const isLeech = progress?.isLeech ?? false;
@@ -150,9 +152,9 @@ export function ProblemCard({ problem, currentIndex, totalCount, onReviewSubmitt
         </div>
       )}
       
-      {/* Problem counter in top right */}
-      {currentIndex !== undefined && totalCount !== undefined && (
-        <div className="absolute top-3 right-3 md:top-5 md:right-5">
+      {/* Top right controls: counter and skip */}
+      <div className="absolute top-3 right-3 md:top-5 md:right-5 flex flex-col items-end gap-2">
+        {currentIndex !== undefined && totalCount !== undefined && (
           <div className="px-2 py-1 md:px-3 md:py-1.5 bg-gray-800/60 backdrop-blur-sm rounded-md border border-gray-700/50">
             <span className="text-xs md:text-sm font-semibold text-gray-300 tabular-nums">
               <span className="text-white">{currentIndex + 1}</span>
@@ -160,8 +162,16 @@ export function ProblemCard({ problem, currentIndex, totalCount, onReviewSubmitt
               <span>{totalCount}</span>
             </span>
           </div>
-        </div>
-      )}
+        )}
+        {canSkip && onSkip && (
+          <button
+            onClick={onSkip}
+            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            Skip for today
+          </button>
+        )}
+      </div>
       <div className="flex items-start justify-between mb-3 md:mb-4 pr-12 md:pr-0">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">

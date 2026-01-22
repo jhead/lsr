@@ -1,4 +1,4 @@
-import type { UserProgress, LeetCodeProblem } from '../types';
+import type { UserProgress, LeetCodeProblem, AppSettings } from '../types';
 
 /**
  * Daily queue data structure
@@ -6,6 +6,7 @@ import type { UserProgress, LeetCodeProblem } from '../types';
 export interface DailyQueueData {
   date: string; // YYYY-MM-DD format
   newCardIds: number[]; // IDs of new cards added to queue today
+  skippedCardIds?: number[]; // IDs of new cards explicitly removed from queue today (won't be re-added)
 }
 
 /**
@@ -15,6 +16,7 @@ export interface AppState {
   problems: LeetCodeProblem[];
   userProgress: UserProgress;
   dailyQueue: DailyQueueData;
+  settings: AppSettings;
   version: string; // For future compatibility checks
 }
 
@@ -23,7 +25,13 @@ const STORAGE_KEYS = {
   USER_PROGRESS: 'lsr_user_progress',
   PROBLEMS: 'lsr_problems',
   DAILY_QUEUE: 'lcsr-daily-queue',
+  SETTINGS: 'lsr_settings',
 } as const;
+
+// Default settings
+const DEFAULT_SETTINGS: AppSettings = {
+  newCardsPerDay: 3,
+};
 
 const CURRENT_STATE_VERSION = '1.0.0';
 
@@ -39,11 +47,13 @@ export const stateManager = {
     const problems = this.loadProblems();
     const userProgress = this.loadUserProgress();
     const dailyQueue = this.loadDailyQueue();
+    const settings = this.loadSettings();
     
     return {
       problems,
       userProgress,
       dailyQueue,
+      settings,
       version: CURRENT_STATE_VERSION,
     };
   },
@@ -55,6 +65,9 @@ export const stateManager = {
     this.saveProblems(state.problems);
     this.saveUserProgress(state.userProgress);
     this.saveDailyQueue(state.dailyQueue);
+    if (state.settings) {
+      this.saveSettings(state.settings);
+    }
     console.log('Saved all application state to localStorage');
   },
 
@@ -144,7 +157,11 @@ export const stateManager = {
         const data = JSON.parse(stored) as DailyQueueData;
         // Validate structure
         if (data.date && Array.isArray(data.newCardIds)) {
-          return data;
+          // Ensure skippedCardIds exists (backwards compatibility)
+          return {
+            ...data,
+            skippedCardIds: data.skippedCardIds || [],
+          };
         }
       }
     } catch (e) {
@@ -171,7 +188,42 @@ export const stateManager = {
   getDefaultDailyQueue(): DailyQueueData {
     const now = new Date();
     const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    return { date, newCardIds: [] };
+    return { date, newCardIds: [], skippedCardIds: [] };
+  },
+
+  /**
+   * Load settings from localStorage
+   */
+  loadSettings(): AppSettings {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+      if (stored) {
+        const data = JSON.parse(stored) as Partial<AppSettings>;
+        // Merge with defaults to ensure all fields exist
+        return { ...DEFAULT_SETTINGS, ...data };
+      }
+    } catch (e) {
+      console.error('Error loading settings:', e);
+    }
+    return { ...DEFAULT_SETTINGS };
+  },
+
+  /**
+   * Save settings to localStorage
+   */
+  saveSettings(settings: AppSettings): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    } catch (e) {
+      console.error('Error saving settings:', e);
+    }
+  },
+
+  /**
+   * Get default settings
+   */
+  getDefaultSettings(): AppSettings {
+    return { ...DEFAULT_SETTINGS };
   },
 
   /**
@@ -223,6 +275,7 @@ export const stateManager = {
         problems: state.problems,
         userProgress: state.userProgress || {},
         dailyQueue: state.dailyQueue,
+        settings: state.settings ? { ...DEFAULT_SETTINGS, ...state.settings } : DEFAULT_SETTINGS,
         version: state.version || CURRENT_STATE_VERSION,
       };
     } catch (error) {
@@ -249,6 +302,7 @@ export const stateManager = {
     localStorage.removeItem(STORAGE_KEYS.USER_PROGRESS);
     localStorage.removeItem(STORAGE_KEYS.PROBLEMS);
     localStorage.removeItem(STORAGE_KEYS.DAILY_QUEUE);
+    localStorage.removeItem(STORAGE_KEYS.SETTINGS);
     console.log('Cleared all application state from localStorage');
   },
 };

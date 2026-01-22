@@ -1,85 +1,143 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { ProblemCard } from './ProblemCard';
 import { FileUploadModal } from './FileUploadModal';
 import { SettingsModal } from './SettingsModal';
+import { getUnifiedProblemList } from '../utils/problemUtils';
 import type { LeetCodeProblem } from '../types';
 
 export function DailyQueue() {
-  const { problems, dailyQueue, moreProblems, reviewedProblems, isLoading, submitReview, undoLastReview, canUndo } = useApp();
+  const { problems, dailyQueue, moreProblems, reviewedProblems, isLoading, submitReview, undoLastReview, canUndo, userProgress, dailyQueueNewCardIds, removeFromDailyQueue } = useApp();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { problemId } = useParams<{ problemId?: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const previousProblemIdRef = useRef<string | undefined>(problemId);
+  
+  // Check if navigation originated from a specific source
+  const sourceParam = searchParams.get('source');
+
+  // Build daily queue ID set for shared sorting logic
+  const dailyQueueIds = useMemo(() => new Set(dailyQueue.map(p => p.id)), [dailyQueue]);
+
+  // Build unified list matching ProblemList.tsx order for consistent navigation
+  const unifiedList = useMemo(() => {
+    return getUnifiedProblemList(problems, userProgress, dailyQueueIds);
+  }, [problems, userProgress, dailyQueueIds]);
 
   // 1. Determine the Current Problem
   // -------------------------------
   const problemIdInt = problemId ? parseInt(problemId, 10) : null;
   
-  let currentProblem: LeetCodeProblem | undefined;
-  let activeList: LeetCodeProblem[] = [];
-  let activeListType: 'daily' | 'more' | 'reviewed' | 'all' = 'daily';
-  let activeIndex = -1;
+  // Extract just the problems from unifiedList for navigation (same order as ProblemList sidebar)
+  const unifiedProblems = useMemo(() => unifiedList.map(item => item.problem), [unifiedList]);
+  
+  // Determine current problem and active list for navigation
+  const { currentProblem, activeList, activeListType, activeIndex } = useMemo(() => {
+    let current: LeetCodeProblem | undefined;
+    let active: LeetCodeProblem[] = [];
+    let type: 'daily' | 'more' | 'reviewed' | 'unified' | 'all' = 'unified';
+    let index = -1;
 
-  if (problemIdInt) {
-    // Priority: Daily Queue -> More Problems -> Reviewed -> All
-    
-    // 1. Daily Queue
-    const inQueue = dailyQueue.find(p => p.id === problemIdInt);
-    if (inQueue) {
-      currentProblem = inQueue;
-      activeList = dailyQueue;
-      activeListType = 'daily';
-      activeIndex = dailyQueue.findIndex(p => p.id === problemIdInt);
-    } 
-    // 2. More Problems
-    else {
-      const inMore = moreProblems.find(p => p.id === problemIdInt);
-      if (inMore) {
-        currentProblem = inMore;
-        activeList = moreProblems;
-        activeListType = 'more';
-        activeIndex = moreProblems.findIndex(p => p.id === problemIdInt);
-      }
-      // 3. Reviewed Problems
-      else {
-        const inReviewed = reviewedProblems.find(p => p.id === problemIdInt);
-        if (inReviewed) {
-          currentProblem = inReviewed;
-          activeList = reviewedProblems;
-          activeListType = 'reviewed';
-          activeIndex = reviewedProblems.findIndex(p => p.id === problemIdInt);
-        }
-        // 4. Fallback to all (should be rare given coverage above)
-        else {
+    if (problemIdInt) {
+      // When source=unified (from the unified ProblemList), use unified list for navigation
+      if (sourceParam === 'unified') {
+        const unifiedIndex = unifiedProblems.findIndex(p => p.id === problemIdInt);
+        if (unifiedIndex !== -1) {
+          current = unifiedProblems[unifiedIndex];
+          active = unifiedProblems;
+          type = 'unified';
+          index = unifiedIndex;
+        } else {
+          // Fallback if not found (shouldn't happen)
           const inAll = problems.find(p => p.id === problemIdInt);
           if (inAll) {
-            currentProblem = inAll;
-            activeList = problems; 
-            activeListType = 'all';
-            activeList = []; // Disable navigation for random access
-            activeIndex = -1;
+            current = inAll;
+            active = unifiedProblems;
+            type = 'unified';
+            index = -1;
           }
         }
       }
+      // When source=reviewed, prioritize the reviewed list for navigation
+      else if (sourceParam === 'reviewed') {
+        // Priority: Reviewed -> Daily Queue -> More Problems -> All
+        const inReviewed = reviewedProblems.find(p => p.id === problemIdInt);
+        if (inReviewed) {
+          current = inReviewed;
+          active = reviewedProblems;
+          type = 'reviewed';
+          index = reviewedProblems.findIndex(p => p.id === problemIdInt);
+        } else {
+          // Fallback if not in reviewed list
+          const inQueue = dailyQueue.find(p => p.id === problemIdInt);
+          if (inQueue) {
+            current = inQueue;
+            active = dailyQueue;
+            type = 'daily';
+            index = dailyQueue.findIndex(p => p.id === problemIdInt);
+          } else {
+            const inMore = moreProblems.find(p => p.id === problemIdInt);
+            if (inMore) {
+              current = inMore;
+              active = moreProblems;
+              type = 'more';
+              index = moreProblems.findIndex(p => p.id === problemIdInt);
+            } else {
+              const inAll = problems.find(p => p.id === problemIdInt);
+              if (inAll) {
+                current = inAll;
+                active = [];
+                type = 'all';
+                index = -1;
+              }
+            }
+          }
+        }
+      } else {
+        // Default: Use unified list for consistent navigation
+        const unifiedIndex = unifiedProblems.findIndex(p => p.id === problemIdInt);
+        if (unifiedIndex !== -1) {
+          current = unifiedProblems[unifiedIndex];
+          active = unifiedProblems;
+          type = 'unified';
+          index = unifiedIndex;
+        } else {
+          // Fallback if not found
+          const inAll = problems.find(p => p.id === problemIdInt);
+          if (inAll) {
+            current = inAll;
+            active = unifiedProblems;
+            type = 'unified';
+            index = -1;
+          }
+        }
+      }
+    } else {
+      // Default to first item in unified list (prioritizes due items)
+      if (unifiedProblems.length > 0) {
+        current = unifiedProblems[0];
+        active = unifiedProblems;
+        type = 'unified';
+        index = 0;
+      }
     }
-  } else {
-    // Default to first item in Daily Queue
-    if (dailyQueue.length > 0) {
-      currentProblem = dailyQueue[0];
-      activeList = dailyQueue;
-      activeListType = 'daily';
-      activeIndex = 0;
-    }
-  }
+
+    return { currentProblem: current, activeList: active, activeListType: type, activeIndex: index };
+  }, [problemIdInt, sourceParam, unifiedProblems, problems, reviewedProblems, dailyQueue, moreProblems]);
 
   // 2. Navigation Helpers
   // ---------------------
-  const navigateToId = useCallback((id: number) => {
-    navigate(`/problem/${id}`);
-  }, [navigate]);
+  const navigateToId = useCallback((id: number, preserveSource: boolean = true) => {
+    // Preserve source param when navigating within the same context
+    if (preserveSource && sourceParam) {
+      navigate(`/problem/${id}?source=${sourceParam}`);
+    } else {
+      navigate(`/problem/${id}`);
+    }
+  }, [navigate, sourceParam]);
 
   // Calculate Next Problem ID (including cross-list navigation)
   const calculateNextProblemId = useCallback((): number | null => {
@@ -90,7 +148,17 @@ export function DailyQueue() {
       return activeList[activeIndex + 1].id;
     } 
     
-    // At end of list - handle transitions
+    // At end of list - handle transitions based on list type
+    if (activeListType === 'unified') {
+      // Unified list wraps within itself
+      return activeList[0].id;
+    }
+    
+    if (activeListType === 'reviewed') {
+      // Reviewed list wraps within itself
+      return activeList[0].id;
+    }
+    
     if (activeListType === 'daily' && moreProblems.length > 0) {
       // Daily Queue -> More Problems
       return moreProblems[0].id;
@@ -102,7 +170,6 @@ export function DailyQueue() {
     }
 
     // Default wrap behavior within same list if no other list available
-    // or if in 'reviewed' list (which loops)
     if (activeList.length > 0) {
       return activeList[0].id;
     }
@@ -119,7 +186,17 @@ export function DailyQueue() {
       return activeList[activeIndex - 1].id;
     }
 
-    // At start of list - handle transitions
+    // At start of list - handle transitions based on list type
+    if (activeListType === 'unified') {
+      // Unified list wraps within itself
+      return activeList[activeList.length - 1].id;
+    }
+    
+    if (activeListType === 'reviewed') {
+      // Reviewed list wraps within itself
+      return activeList[activeList.length - 1].id;
+    }
+
     if (activeListType === 'more' && dailyQueue.length > 0) {
       // More Problems -> Daily Queue (last item)
       return dailyQueue[dailyQueue.length - 1].id;
@@ -207,12 +284,12 @@ export function DailyQueue() {
   // 4. Effects
   // ----------
   
-  // Default redirect if nothing selected
+  // Default redirect if nothing selected - use unified list order
   useEffect(() => {
-    if (!problemId && dailyQueue.length > 0) {
-      navigate(`/problem/${dailyQueue[0].id}`, { replace: true });
+    if (!problemId && unifiedProblems.length > 0) {
+      navigate(`/problem/${unifiedProblems[0].id}?source=unified`, { replace: true });
     }
-  }, [problemId, dailyQueue, navigate]);
+  }, [problemId, unifiedProblems, navigate]);
 
   // Transition effect
   useEffect(() => {
@@ -278,28 +355,31 @@ export function DailyQueue() {
   if (problems.length === 0) return <FileUploadModal variant="fullpage" />;
 
   // "No problems" state
-  // Show if: No ID selected (and queue empty) OR ID selected but not found
-  if ((!problemId && dailyQueue.length === 0) || (problemId && !currentProblem)) {
+  // Show if: No ID selected (and no problems) OR ID selected but not found
+  if ((!problemId && unifiedProblems.length === 0) || (problemId && !currentProblem)) {
+    // Count due problems for display (problems in "today" section)
+    const dueCount = unifiedList.filter(p => p.section === 'today').length;
+    
     return (
       <div className="flex-1 bg-black pt-14 md:pt-4 pb-4 md:pb-8 px-2 md:px-4 overflow-y-auto h-full">
         <div className="max-w-4xl mx-auto">
           <div className="bg-gray-900 rounded-lg shadow-md p-8 text-center border border-gray-800">
             <p className="text-lg text-gray-400">
-              {dailyQueue.length === 0 ? "🎉 No problems due for review today!" : "Problem not found"}
+              {unifiedProblems.length === 0 
+                ? "No problems loaded yet" 
+                : dueCount === 0 
+                  ? "🎉 No problems due for review today!" 
+                  : "Problem not found"}
             </p>
-            {dailyQueue.length === 0 && (
-               <div className="space-y-2 mt-2">
-                 {moreProblems.length > 0 && (
-                   <p className="text-sm text-gray-500">
-                     Check "More Problems" in the sidebar for new challenges!
-                   </p>
-                 )}
-                 {reviewedProblems.length > 0 && (
-                   <p className="text-sm text-gray-500">
-                     Or review your completed problems in the "Reviewed" section.
-                   </p>
-                 )}
-               </div>
+            {unifiedProblems.length === 0 && (
+               <p className="text-sm text-gray-500 mt-2">
+                 Use the upload button in the sidebar to load problems.
+               </p>
+            )}
+            {unifiedProblems.length > 0 && dueCount === 0 && (
+               <p className="text-sm text-gray-500 mt-2">
+                 Check the sidebar to explore new problems or review scheduled ones.
+               </p>
             )}
           </div>
           
@@ -407,6 +487,14 @@ export function DailyQueue() {
                  currentIndex={activeListType !== 'all' ? activeIndex : undefined}
                  totalCount={activeListType !== 'all' ? activeList.length : undefined}
                  onReviewSubmitted={handleReview}
+                 canSkip={dailyQueueNewCardIds.includes(currentProblem.id)}
+                 onSkip={() => {
+                   const nextId = calculateNextProblemId();
+                   removeFromDailyQueue(currentProblem!.id);
+                   if (nextId !== null && nextId !== currentProblem!.id) {
+                     navigateToId(nextId);
+                   }
+                 }}
                />
              )}
            </div>
@@ -414,7 +502,7 @@ export function DailyQueue() {
 
         {/* Footer */}
         <div className="mt-8 text-center">
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-3 flex-wrap">
               <span className="text-xs text-gray-600 font-mono">{__APP_VERSION__.slice(0, 7)}</span>
               {canUndo && (
                 <>

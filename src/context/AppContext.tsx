@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import type { LeetCodeProblem, UserProgress, ProblemProgress, ReviewHistoryEntry } from '../types';
+import type { LeetCodeProblem, UserProgress, ProblemProgress, ReviewHistoryEntry, AppSettings } from '../types';
 import { loadUserProgress, saveUserProgress, updateProblemProgress, loadProblems, saveProblems } from '../utils/storage';
 import { stateManager, type DailyQueueData } from '../utils/stateManager';
 import { updateSM2, initSM2, applyFuzzFactor } from '../utils/sm2';
@@ -7,12 +7,12 @@ import type { SM2Params } from '../utils/sm2';
 
 // Configuration constants
 const MAX_UNDO_HISTORY = 10; // Maximum number of reviews to keep for undo
-const NEW_CARDS_PER_DAY = 20; // Maximum new cards to introduce per day
 
 interface AppContextType {
   problems: LeetCodeProblem[];
   userProgress: UserProgress;
   dailyQueue: LeetCodeProblem[]; // Problems in today's queue (due + new cards)
+  dailyQueueNewCardIds: number[]; // IDs of new cards in today's queue (for UI to show remove button)
   moreProblems: LeetCodeProblem[]; // Actionable problems not in daily queue
   reviewedProblems: LeetCodeProblem[]; // Problems already reviewed and not due (review again)
   submitReview: (problemId: number, quality: number) => void;
@@ -23,6 +23,9 @@ interface AppContextType {
   clearAllProgress: () => void;
   leechProblems: LeetCodeProblem[]; // Problems that are leeches
   reloadState: () => void; // Reload all state from localStorage
+  settings: AppSettings;
+  updateSettings: (settings: Partial<AppSettings>) => void;
+  removeFromDailyQueue: (problemId: number) => void; // Remove a new problem from today's queue
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -63,6 +66,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Daily queue tracking - persisted in localStorage
   const [dailyQueueData, setDailyQueueData] = useState<DailyQueueData>(() => loadDailyQueue());
   
+  // Settings - persisted in localStorage
+  const [settings, setSettings] = useState<AppSettings>(() => stateManager.loadSettings());
+  
   // Undo history - kept in memory only (not persisted)
   const [undoHistory, setUndoHistory] = useState<ReviewHistoryEntry[]>([]);
 
@@ -99,19 +105,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [dailyQueueData.date]);
 
-  // Calculate daily queue: due reviews + limited new cards (persisted)
+  // Populate daily queue with new cards when needed (dedicated effect for reliability)
+  useEffect(() => {
+    if (problems.length === 0) return; // Wait for problems to load
+    
+    // Find new problems (no progress yet)
+    const newProblems = problems.filter(p => !userProgress[p.id]);
+    if (newProblems.length === 0) return; // No new problems to add
+    
+    // Check how many slots remain
+    const slotsRemaining = settings.newCardsPerDay - dailyQueueData.newCardIds.length;
+    if (slotsRemaining <= 0) return; // Already at limit
+    
+    // Find new cards to add (not already in queue and not skipped)
+    const existingIds = new Set(dailyQueueData.newCardIds);
+    const skippedIds = new Set(dailyQueueData.skippedCardIds || []);
+    const cardsToAdd: number[] = [];
+    
+    for (const problem of newProblems) {
+      if (cardsToAdd.length >= slotsRemaining) break;
+      if (!existingIds.has(problem.id) && !skippedIds.has(problem.id)) {
+        cardsToAdd.push(problem.id);
+      }
+    }
+    
+    if (cardsToAdd.length > 0) {
+      const newData = {
+        ...dailyQueueData,
+        newCardIds: [...dailyQueueData.newCardIds, ...cardsToAdd],
+      };
+      setDailyQueueData(newData);
+      saveDailyQueue(newData);
+      console.log(`Added ${cardsToAdd.length} new cards to daily queue:`, cardsToAdd);
+    }
+  }, [problems, userProgress, dailyQueueData, settings.newCardsPerDay]);
+
+  // Calculate daily queue: due reviews + new cards from dailyQueueData
   const dailyQueue = useMemo(() => {
     const now = Date.now();
     
     // Get problems that are due for review
     const reviewProblems: Array<{ problem: LeetCodeProblem; progress: ProblemProgress }> = [];
-    const newProblems: LeetCodeProblem[] = [];
     
     for (const problem of problems) {
       const progress = userProgress[problem.id];
-      if (!progress) {
-        newProblems.push(problem);
-      } else if (progress.nextReview <= now) {
+      if (progress && progress.nextReview <= now) {
         reviewProblems.push({ problem, progress });
       }
     }
@@ -131,48 +169,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return overdueA - overdueB;
     });
     
-    // Get new cards for today's queue
-    // Include any new cards already added to today's queue (that are still new/unreviewed)
-    const existingNewCardsInQueue = dailyQueueData.newCardIds
+    // Get new cards from daily queue data (that are still new/unreviewed)
+    const newCardsInQueue = dailyQueueData.newCardIds
       .filter(id => !userProgress[id]) // Still new (not reviewed yet)
       .map(id => problems.find(p => p.id === id))
       .filter((p): p is LeetCodeProblem => p !== undefined);
     
-    // Only add more new cards if we haven't hit the daily limit of ADDED cards
-    // (not based on unreviewed cards - once 20 are added, no more for the day)
-    const existingIds = new Set(dailyQueueData.newCardIds);
-    const additionalNewCards: LeetCodeProblem[] = [];
-    const slotsRemaining = NEW_CARDS_PER_DAY - dailyQueueData.newCardIds.length;
-    
-    for (const problem of newProblems) {
-      if (additionalNewCards.length >= slotsRemaining) break;
-      if (!existingIds.has(problem.id)) {
-        additionalNewCards.push(problem);
-      }
-    }
-    
-    // Update daily queue data if we added new cards
-    if (additionalNewCards.length > 0) {
-      const newIds = [...dailyQueueData.newCardIds, ...additionalNewCards.map(p => p.id)];
-      const newData = { ...dailyQueueData, newCardIds: newIds };
-      // Use setTimeout to avoid state update during render
-      setTimeout(() => {
-        setDailyQueueData(newData);
-        saveDailyQueue(newData);
-      }, 0);
-    }
-    
-    // Combine: reviews first, then unreviewed new cards
-    const queueNewCards = [...existingNewCardsInQueue, ...additionalNewCards];
+    // Combine: reviews first, then new cards
     const result = [
       ...reviewProblems.map(r => r.problem),
-      ...queueNewCards,
+      ...newCardsInQueue,
     ];
     
-    console.log(`Daily queue: ${reviewProblems.length} reviews, ${queueNewCards.length} new cards (${dailyQueueData.newCardIds.length} total added today)`);
+    console.log(`Daily queue: ${reviewProblems.length} reviews, ${newCardsInQueue.length} new cards (limit: ${settings.newCardsPerDay})`);
     
     return result;
-  }, [problems, userProgress, dailyQueueData]);
+  }, [problems, userProgress, dailyQueueData, settings.newCardsPerDay]);
 
   // Compute "More Problems" - actionable problems not in the daily queue
   const moreProblems = useMemo(() => {
@@ -330,10 +342,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const queueData = loadDailyQueue();
     setDailyQueueData(queueData);
     
+    const loadedSettings = stateManager.loadSettings();
+    setSettings(loadedSettings);
+    
     setUndoHistory([]); // Clear undo history on reload
     
     console.log('Reloaded all state from localStorage');
   }, [handleSetProblems]);
+
+  // Update settings
+  const updateSettings = useCallback((newSettings: Partial<AppSettings>) => {
+    setSettings(prev => {
+      const updated = { ...prev, ...newSettings };
+      stateManager.saveSettings(updated);
+      console.log('Settings updated:', updated);
+      return updated;
+    });
+  }, []);
+
+  // Remove a new problem from today's queue (move back to "New Problems")
+  const removeFromDailyQueue = useCallback((problemId: number) => {
+    // Only allow removing NEW cards (not due reviews)
+    if (!dailyQueueData.newCardIds.includes(problemId)) {
+      console.log(`Problem ${problemId} is not a new card in today's queue, cannot remove`);
+      return;
+    }
+    
+    const newData = {
+      ...dailyQueueData,
+      newCardIds: dailyQueueData.newCardIds.filter(id => id !== problemId),
+      // Add to skipped list so it won't be re-added today
+      skippedCardIds: [...(dailyQueueData.skippedCardIds || []), problemId],
+    };
+    setDailyQueueData(newData);
+    saveDailyQueue(newData);
+    console.log(`Removed problem ${problemId} from daily queue (skipped for today)`);
+  }, [dailyQueueData]);
 
   return (
     <AppContext.Provider
@@ -341,6 +385,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         problems,
         userProgress,
         dailyQueue,
+        dailyQueueNewCardIds: dailyQueueData.newCardIds,
         moreProblems,
         reviewedProblems,
         submitReview,
@@ -351,6 +396,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         clearAllProgress,
         leechProblems,
         reloadState,
+        settings,
+        updateSettings,
+        removeFromDailyQueue,
       }}
     >
       {children}

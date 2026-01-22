@@ -30,6 +30,10 @@ export interface UserProgress {
   [problemId: number]: ProblemProgress;
 }
 
+export interface AppSettings {
+  newCardsPerDay: number;
+}
+
 // For undo functionality
 export interface ReviewHistoryEntry {
   problemId: number;
