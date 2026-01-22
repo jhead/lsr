@@ -32,6 +32,8 @@ export interface UserProgress {
 
 export interface AppSettings {
   newCardsPerDay: number;
+  snapshotApiEndpoint?: string;  // e.g., "https://lcd.jxh.io"
+  snapshotApiKey?: string;
 }
 
 // For undo functionality

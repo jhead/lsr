@@ -1,9 +1,10 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { LeetCodeProblem, UserProgress, ProblemProgress, ReviewHistoryEntry, AppSettings } from '../types';
 import { loadUserProgress, saveUserProgress, updateProblemProgress, loadProblems, saveProblems } from '../utils/storage';
 import { stateManager, type DailyQueueData } from '../utils/stateManager';
 import { updateSM2, initSM2, applyFuzzFactor } from '../utils/sm2';
 import type { SM2Params } from '../utils/sm2';
+import { debouncedSendSnapshot } from '../utils/snapshotService';
 
 // Configuration constants
 const MAX_UNDO_HISTORY = 10; // Maximum number of reviews to keep for undo
@@ -139,6 +140,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.log(`Added ${cardsToAdd.length} new cards to daily queue:`, cardsToAdd);
     }
   }, [problems, userProgress, dailyQueueData, settings.newCardsPerDay]);
+
+  // Track if we've done the initial load to avoid sending snapshot on mount
+  const hasInitialized = useRef(false);
+
+  // Send snapshot to LCD dashboard on userProgress changes (debounced)
+  useEffect(() => {
+    // Skip initial mount - only send on actual changes
+    if (!hasInitialized.current) {
+      if (Object.keys(userProgress).length > 0 || problems.length > 0) {
+        hasInitialized.current = true;
+      }
+      return;
+    }
+
+    // Only send if we have both the endpoint configured and problems loaded
+    if (settings.snapshotApiEndpoint && settings.snapshotApiKey && problems.length > 0) {
+      debouncedSendSnapshot(settings, problems, userProgress);
+    }
+  }, [userProgress, settings, problems]);
 
   // Calculate daily queue: due reviews + new cards from dailyQueueData
   const dailyQueue = useMemo(() => {

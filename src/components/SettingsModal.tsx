@@ -220,6 +220,44 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 </div>
               </div>
 
+              {/* Dashboard Integration Section */}
+              <div className="border-t border-gray-800 pt-4">
+                <h3 className="text-sm font-semibold text-gray-300 mb-3">
+                  Dashboard Integration
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="snapshotApiEndpoint" className="block text-sm text-gray-400 mb-2">
+                      Snapshot API Endpoint
+                    </label>
+                    <input
+                      type="text"
+                      id="snapshotApiEndpoint"
+                      placeholder="https://lcd.jxh.io"
+                      value={settings.snapshotApiEndpoint || ''}
+                      onChange={(e) => updateSettings({ snapshotApiEndpoint: e.target.value || undefined })}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="snapshotApiKey" className="block text-sm text-gray-400 mb-2">
+                      API Key
+                    </label>
+                    <input
+                      type="password"
+                      id="snapshotApiKey"
+                      placeholder="Your API key"
+                      value={settings.snapshotApiKey || ''}
+                      onChange={(e) => updateSettings({ snapshotApiKey: e.target.value || undefined })}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Connect to LCD (LeetCode Dashboard) to track your mastery progress over time. Your progress snapshots will be sent automatically when you review problems.
+                  </p>
+                </div>
+              </div>
+
               <div className="border-t border-gray-800 pt-4">
                 <h3 className="text-sm font-semibold text-gray-300 mb-3">
                   Import/Export State
