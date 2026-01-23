@@ -471,15 +471,15 @@
       "Array",
       "Sorting"
     ],
-    "description": "Given a list of intervals [start, end], merge all overlapping intervals and return a list of non-overlapping intervals that covers all input intervals. Constraints: 1 <= intervals.length <= 10^4 and 0 <= start <= end <= 10^4, so an O(n log n) sort-based solution is acceptable.",
+    "description": "You are given an array of intervals, where each interval is represented as [start, end]. The task is to merge all intervals that overlap (including when one ends exactly where another starts) and return a list of non-overlapping intervals that collectively cover all original intervals. The output can be in any order, but is typically returned sorted by start after merging.",
     "example": {
       "input": "intervals = [[1,3],[2,6],[8,10],[15,18]]",
       "output": "[[1,6],[8,10],[15,18]]"
     },
-    "optimal_strategy": "Sort intervals by start and scan once, merging a current interval with the last merged interval when they overlap (current.start <= last.end).\n\n```typescript\nfunction merge(intervals: number[][]): number[][] {\n  if (intervals.length === 0) return [];\n\n  // Sort by start\n  intervals.sort((a, b) => a[0] - b[0]);\n\n  const merged: number[][] = [];\n  for (const interval of intervals) {\n    if (merged.length === 0) {\n      // push a copy to avoid mutating original subarrays\n      merged.push([interval[0], interval[1]]);\n    } else {\n      const last = merged[merged.length - 1];\n      if (interval[0] <= last[1]) {\n        // overlap -> merge by extending the end\n        last[1] = Math.max(last[1], interval[1]);\n      } else {\n        // no overlap -> append\n        merged.push([interval[0], interval[1]]);\n      }\n    }\n  }\n\n  return merged;\n}\n```",
+    "optimal_strategy": "Sort intervals by start, then scan left-to-right, either appending a non-overlapping interval or merging by extending the end of the last merged interval.\n\n```typescript\nfunction merge(intervals: number[][]): number[][] {\n  if (intervals.length <= 1) return intervals;\n\n  intervals.sort((a, b) => a[0] - b[0]);\n\n  const merged: number[][] = [];\n  let [curStart, curEnd] = intervals[0];\n\n  for (let i = 1; i < intervals.length; i++) {\n    const [start, end] = intervals[i];\n\n    if (start > curEnd) {\n      // no overlap\n      merged.push([curStart, curEnd]);\n      curStart = start;\n      curEnd = end;\n    } else {\n      // overlap (including touching endpoints)\n      curEnd = Math.max(curEnd, end);\n    }\n  }\n\n  merged.push([curStart, curEnd]);\n  return merged;\n}\n```",
     "complexity": {
       "time": "O(n log n)",
-      "space": "O(log n) (or O(n) if sorting requires extra space / if you return a new array copy)"
+      "space": "O(log n) (or O(n) depending on sorting implementation/copying)"
     }
   },
   {
