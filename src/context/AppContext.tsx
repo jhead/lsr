@@ -271,11 +271,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     // Apply fuzz factor to prevent review clustering
     const fuzzedInterval = applyFuzzFactor(updated.interval);
-    
-    // Calculate next review date (current time + fuzzed interval days in milliseconds)
+
+    // Calculate next review date aligned to midnight (start of day)
     const now = Date.now();
-    const intervalMs = fuzzedInterval * 24 * 60 * 60 * 1000;
-    const nextReview = now + intervalMs;
+    const nextReviewDate = new Date(now);
+    nextReviewDate.setDate(nextReviewDate.getDate() + Math.round(fuzzedInterval));
+    nextReviewDate.setHours(0, 0, 0, 0);
+    const nextReview = nextReviewDate.getTime();
 
     const newProgress: ProblemProgress = {
       iterations: updated.iterations,
